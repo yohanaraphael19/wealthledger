@@ -515,8 +515,21 @@ function renderLandDonut(series, labels) {
 }
 
 // ── AI SECTION ────────────────────────────────────────────────────────────────
-let chatCountToday = 0;
-let aiContext = '';
+const TODAY_KEY = new Date().toISOString().slice(0,10); // e.g. "2026-03-13"
+
+function getChatCount() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('wl_chat') || '{}');
+    return saved.date === TODAY_KEY ? (saved.count || 0) : 0;
+  } catch(e) { return 0; }
+}
+function saveChatCount(n) {
+  try { localStorage.setItem('wl_chat', JSON.stringify({ date: TODAY_KEY, count: n })); } catch(e) {}
+}
+
+let chatCountToday = getChatCount();
+let aiContext      = '';
+let fullInsightText = '';
 
 function toggleAI() {
   const body    = document.getElementById('aiBody');
@@ -531,35 +544,95 @@ function toggleAI() {
 
 async function loadAIParsed() {
   try {
-    const rows = await fetchSheet('AI_Parsed!A1:B10');
+    // Load parsed cards
+    const parsedRows = await fetchSheet('AI_Parsed!A1:B10');
     const data = {};
-    rows.forEach(r => { if (r[0] && r[1]) data[r[0].trim()] = r[1].trim(); });
+    parsedRows.forEach(r => { if (r[0] && r[1]) data[r[0].trim()] = r[1].trim(); });
 
     if (data['Generated']) {
       document.getElementById('aiGenerated').innerHTML = `<span class="ai-generated-dot"></span> Last analysis: ${data['Generated']}`;
     }
-    document.getElementById('aiHealth').textContent    = data['Health']    || '—';
+
+    // Health card — make clickable to open full report
+    const healthVal = data['Health'] || '—';
+    const healthEl  = document.getElementById('aiHealth');
+    if (healthVal && healthVal !== '—') {
+      healthEl.innerHTML = `<span style="cursor:pointer;text-decoration:underline dotted;color:var(--teal)" onclick="openFullReport()">${healthVal}</span>`;
+    } else {
+      healthEl.innerHTML = `<span style="cursor:pointer;color:var(--teal);font-size:13px" onclick="openFullReport()">📄 Tap to read full report →</span>`;
+    }
     document.getElementById('aiHealthSub').textContent = data['HealthSub'] || '';
     document.getElementById('aiBuy').textContent       = data['TopBuy']    || '—';
     document.getElementById('aiBuySub').textContent    = data['BuySub']    || '';
     document.getElementById('aiAction').textContent    = data['Action']    || '—';
     document.getElementById('aiActionSub').textContent = data['ActionSub'] || '';
 
-    // Build context for chat from parsed data
-    aiContext = `Portfolio Health: ${data['Health']||''}. ${data['HealthSub']||''}
-Top Buy: ${data['TopBuy']||''}. ${data['BuySub']||''}
-30-Day Action: ${data['Action']||''}`;
+    // Load full AI_Insights text for modal + rich chat context
+    const insightRows = await fetchSheet('AI_Insights!A4:A4');
+    fullInsightText   = insightRows[0]?.[0] || '';
+
+    // Build rich context for chat — includes actual portfolio numbers from dashboard
+    const stockVal  = document.getElementById('cardStockVal')?.textContent  || '';
+    const pnl       = document.getElementById('cardPnl')?.textContent       || '';
+    const shares    = document.getElementById('cardTotalShares')?.textContent|| '';
+    const landVal   = document.getElementById('cardLandVal')?.textContent   || '';
+    const heroVal   = document.getElementById('heroNum')?.textContent       || '';
+
+    aiContext = `INVESTOR PORTFOLIO SUMMARY:
+- Total Net Worth: TZS ${heroVal}
+- Stock Portfolio Value: ${stockVal}
+- Total Shares Held: ${shares}
+- Unrealized P&L: ${pnl}
+- Land Portfolio Value: ${landVal}
+- Tickers held: CRDB (majority), IEACLC-ETF
+
+LATEST AI ANALYSIS SUMMARY:
+${fullInsightText.slice(0, 2000)}`;
 
   } catch(e) {
     document.getElementById('aiGenerated').innerHTML = '<span style="color:var(--red)">⚠ No AI analysis yet — run runAIAnalysis() in Apps Script first</span>';
+    document.getElementById('aiHealth').innerHTML = '<span style="cursor:pointer;color:var(--teal)" onclick="openFullReport()">📄 Tap to read full report →</span>';
   }
   updateLimitUI();
 }
 
+// ── FULL REPORT MODAL ─────────────────────────────────────────────────────────
+function openFullReport() {
+  let modal = document.getElementById('aiModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'aiModal';
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;`;
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;max-width:700px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#0D3D3D,#1A5F5F);border-radius:20px 20px 0 0;">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;">📊 Full AI Portfolio Report</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;" id="modalDate"></div>
+          </div>
+          <button onclick="document.getElementById('aiModal').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+        </div>
+        <div style="overflow-y:auto;padding:24px;flex:1;" id="modalBody"></div>
+      </div>`;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+    document.body.appendChild(modal);
+  }
+  // Render markdown-ish text nicely
+  const rendered = fullInsightText
+    .replace(/###\s*(.+)/g, '<h3 style="font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:var(--navy);margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--border)">$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\s*[\*\-]\s+/gm, '• ')
+    .replace(/\n/g, '<br>');
+  document.getElementById('modalBody').innerHTML = `<div style="font-size:13px;line-height:1.8;color:var(--navy)">${rendered || '<em>No report yet. Run runAIAnalysis() in Apps Script.</em>'}</div>`;
+  document.getElementById('modalDate').textContent = document.getElementById('aiGenerated')?.textContent?.replace('Last analysis: ','') || '';
+  modal.style.display = 'flex';
+}
+
 function updateLimitUI() {
   const used = chatCountToday;
-  const pct  = (used / CHAT_LIMIT) * 100;
+  const pct  = Math.min((used / CHAT_LIMIT) * 100, 100);
   document.getElementById('aiLimitFill').style.width = pct + '%';
+  document.getElementById('aiLimitFill').style.background = used >= CHAT_LIMIT ? 'var(--red)' : 'var(--teal)';
   document.getElementById('aiLimitText').textContent = `${used} / ${CHAT_LIMIT} questions used today`;
   document.getElementById('chatLimitLabel').textContent = `${CHAT_LIMIT - used} remaining today`;
   const btn = document.getElementById('aiSendBtn');
@@ -571,9 +644,10 @@ function appendMessage(role, text) {
   const box = document.getElementById('aiMessages');
   const div = document.createElement('div');
   div.className = 'ai-msg ' + role;
+  const rendered = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
   div.innerHTML = `
     <div class="ai-msg-avatar">${role === 'user' ? 'You' : '🤖'}</div>
-    <div class="ai-msg-bubble"><div class="ai-msg-text">${text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div></div>`;
+    <div class="ai-msg-bubble"><div class="ai-msg-text">${rendered}</div></div>`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -589,25 +663,25 @@ async function sendAIChat() {
 
   // Typing indicator
   const typingDiv = document.createElement('div');
-  typingDiv.className = 'ai-msg bot'; typingDiv.id = 'typing';
+  typingDiv.className = 'ai-msg bot'; typingDiv.id = 'ai_typing';
   typingDiv.innerHTML = '<div class="ai-msg-avatar">🤖</div><div class="ai-msg-bubble"><div class="ai-msg-text" style="color:var(--muted)">Thinking…</div></div>';
   document.getElementById('aiMessages').appendChild(typingDiv);
   document.getElementById('aiMessages').scrollTop = 99999;
 
   try {
-    // Route through Apps Script proxy — no CORS issues
     const res = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight
-      body: JSON.stringify({ question: q, context: aiContext })
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ question: q, context: aiContext })
     });
     const data = await res.json();
-    document.getElementById('typing')?.remove();
+    document.getElementById('ai_typing')?.remove();
     appendMessage('bot', data.answer || 'No response received.');
     chatCountToday++;
+    saveChatCount(chatCountToday);
   } catch(e) {
-    document.getElementById('typing')?.remove();
-    appendMessage('bot', 'Connection error. Please try again.');
+    document.getElementById('ai_typing')?.remove();
+    appendMessage('bot', 'Connection error. Please try again in a moment.');
   }
   updateLimitUI();
   if (chatCountToday < CHAT_LIMIT) document.getElementById('aiSendBtn').disabled = false;
