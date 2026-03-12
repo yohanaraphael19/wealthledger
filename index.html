@@ -611,7 +611,7 @@
       <div class="card" onclick="toggleDropdown('stockValDrop')">
         <div class="card-label">Stock Portfolio Value</div>
         <div class="card-value" id="cardStockVal">—</div>
-        <div class="card-sub">Tap to see breakdown ▾</div>
+        <div class="card-sub" id="stockValHint">▾ tap to see breakdown</div>
         <div class="card-dropdown" id="stockValDrop">
           <div id="stockValRows"></div>
           <div class="dropdown-hint">Current market value per ticker</div>
@@ -622,7 +622,7 @@
       <div class="card" onclick="toggleDropdown('sharesDrop')">
         <div class="card-label">Total Shares Held</div>
         <div class="card-value" id="cardTotalShares">—</div>
-        <div class="card-sub">Tap to see breakdown ▾</div>
+        <div class="card-sub" id="sharesHint">▾ tap to see breakdown</div>
         <div class="card-dropdown" id="sharesDrop">
           <div id="sharesRows"></div>
           <div class="dropdown-hint">Net shares after all sells</div>
@@ -685,7 +685,14 @@
           <div class="bcard-title">Land Portfolio</div>
           <div class="bcard-icon" style="background:var(--gold-lt)">🏞️</div>
         </div>
-        <div class="land-stats" id="landStats"></div>
+        <div class="stock-donut-wrap">
+          <div class="donut-container"><div id="landDonutChart"></div></div>
+          <div class="stock-tickers" id="landRegionRows"></div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Total Value</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--navy)" id="landTotalValSmall">—</span>
+        </div>
       </div>
 
       <!-- OPPORTUNITY COST -->
@@ -731,6 +738,9 @@ async function fetchSheet(range) {
 function toggleDropdown(id) {
   const el = document.getElementById(id);
   el.classList.toggle('show');
+  const hintMap = { 'stockValDrop': 'stockValHint', 'sharesDrop': 'sharesHint' };
+  const hint = document.getElementById(hintMap[id]);
+  if (hint) hint.textContent = el.classList.contains('show') ? '▴ tap to collapse' : '▾ tap to see breakdown';
 }
 
 function toggleHero() {
@@ -742,7 +752,7 @@ function toggleHero() {
 document.getElementById('heroCard').addEventListener('click', toggleHero);
 
 // ── CHART INSTANCES ──────────────────────────────────────────────────────────
-let tsChart = null, donutChart = null;
+let tsChart = null, donutChart = null, landDonutChart = null;
 let allMonthlyData = [];
 
 // ── MAIN LOAD ────────────────────────────────────────────────────────────────
@@ -887,12 +897,12 @@ async function loadData() {
 
     // Card: Shares
     const totalSharesAll = Object.values(netShares).reduce((a,b) => a+b, 0);
-    document.getElementById('cardTotalShares').textContent = fmtN(totalSharesAll) + ' sh';
+    document.getElementById('cardTotalShares').textContent = fmtN(totalSharesAll);
     const shRows = document.getElementById('sharesRows');
     shRows.innerHTML = tickers.map(tk => `
       <div class="dropdown-row">
         <span class="dropdown-ticker">${tk}</span>
-        <span class="dropdown-val">${fmtN(netShares[tk])} sh</span>
+        <span class="dropdown-val">${fmtN(netShares[tk])}</span>
       </div>`).join('');
 
     // Card: P&L
@@ -941,30 +951,42 @@ async function loadData() {
     }).join('');
     document.getElementById('stockTickers').innerHTML = tickerHTML;
 
-    // Land stats card
-    const landGainCls = totalLandGain >= 0 ? 'pos-text' : 'neg-text';
-    const landGainSign = totalLandGain >= 0 ? '+' : '';
-    document.getElementById('landStats').innerHTML = `
-      <div class="land-stat-row">
-        <span class="land-stat-label">Total Cost Basis</span>
-        <span class="land-stat-val">${fmt(totalLandCost)}</span>
-      </div>
-      <div class="land-stat-row">
-        <span class="land-stat-label">Current Value</span>
-        <span class="land-stat-val">${fmt(totalLandVal)}</span>
-      </div>
-      <div class="land-stat-row">
-        <span class="land-stat-label">Gain / Loss</span>
-        <span class="land-stat-val ${landGainCls}">${landGainSign}${fmt(totalLandGain)}</span>
-      </div>
-      <div class="land-stat-row">
-        <span class="land-stat-label">Total Area</span>
-        <span class="land-stat-val">${Math.round(totalSqm).toLocaleString()} sqm</span>
-      </div>
-      <div class="land-stat-row">
-        <span class="land-stat-label">Number of Plots</span>
-        <span class="land-stat-val">${plots.length}</span>
-      </div>`;
+    // Land pie chart by region
+    const landColors = ['#C9973A', '#1A5F5F', '#2A7F7F', '#1E7E34', '#8A5A2A', '#3D7A5F'];
+    const regionMap = {};
+    plots.forEach(p => {
+      const reg = p.region || 'Unknown';
+      if (!regionMap[reg]) regionMap[reg] = { sqm: 0, value: 0, plots: 0 };
+      const sqm = parseFloat(String(p.size).replace(/[^0-9.]/g, '')) || 0;
+      regionMap[reg].sqm   += sqm;
+      regionMap[reg].value += p.currentVal || p.trueCost;
+      regionMap[reg].plots += 1;
+    });
+    const regions = Object.keys(regionMap);
+    const landDonutSeries = regions.map(r => Math.round(regionMap[r].value));
+    const landDonutLabels = regions;
+    renderLandDonut(landDonutSeries, landDonutLabels);
+
+    const landRegionHTML = regions.map((reg, i) => {
+      const d = regionMap[reg];
+      const share = totalLandVal > 0 ? (d.value / totalLandVal * 100).toFixed(0) : 0;
+      return `
+        <div class="ticker-row">
+          <div class="ticker-left">
+            <div class="ticker-dot" style="background:${landColors[i % landColors.length]}"></div>
+            <div>
+              <div class="ticker-name">${reg}</div>
+              <div class="ticker-pct">${d.plots} plot${d.plots > 1 ? 's' : ''} · ${Math.round(d.sqm).toLocaleString()} sqm</div>
+            </div>
+          </div>
+          <div class="ticker-right">
+            <div class="ticker-pnl neu-text">${share}%</div>
+            <div class="ticker-pnl-pct neu-text">${fmt(d.value)}</div>
+          </div>
+        </div>`;
+    }).join('');
+    document.getElementById('landRegionRows').innerHTML = landRegionHTML;
+    document.getElementById('landTotalValSmall').textContent = fmt(totalLandVal);
 
     // Opportunity cost
     document.getElementById('oppTotal').textContent = fmt(totalLeftOnTable);
@@ -1073,6 +1095,23 @@ function renderDonut(series, labels) {
     tooltip: { y: { formatter: v => fmt(v) } },
   });
   donutChart.render();
+}
+
+// ── LAND DONUT CHART (by region) ─────────────────────────────────────────────
+function renderLandDonut(series, labels) {
+  if (landDonutChart) { landDonutChart.destroy(); landDonutChart = null; }
+  landDonutChart = new ApexCharts(document.getElementById('landDonutChart'), {
+    series,
+    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    labels,
+    colors: ['#C9973A', '#1A5F5F', '#2A7F7F', '#1E7E34', '#8A5A2A', '#3D7A5F'],
+    legend: { show: false },
+    dataLabels: { enabled: false },
+    plotOptions: { pie: { donut: { size: '68%' } } },
+    stroke: { width: 2, colors: ['#fff'] },
+    tooltip: { y: { formatter: v => fmt(v) } },
+  });
+  landDonutChart.render();
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
