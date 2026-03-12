@@ -417,7 +417,13 @@
     align-items: center;
     gap: 20px;
   }
-  .donut-container { flex-shrink: 0; }
+  .donut-container {
+    flex-shrink: 0;
+    width: clamp(110px, 22%, 190px);
+  }
+  .donut-container > div {
+    width: 100% !important;
+  }
   .stock-tickers { flex: 1; }
   .ticker-row {
     display: flex;
@@ -566,7 +572,7 @@
     <div class="header-logo">WL</div>
     <div>
       <div class="header-title">WealthLedger</div>
-      <div class="header-sub">DSE Portfolio Dashboard · All values in TZS</div>
+      <div class="header-sub">Stocks · Land · Legacy &nbsp;·&nbsp; All values in TZS</div>
     </div>
   </div>
   <div class="header-right">
@@ -1085,7 +1091,7 @@ function renderDonut(series, labels) {
   if (donutChart) { donutChart.destroy(); donutChart = null; }
   donutChart = new ApexCharts(document.getElementById('donutChart'), {
     series,
-    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    chart: { type: 'donut', width: '100%', fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
     labels,
     colors: ['#1A5F5F', '#C9973A', '#2A7F7F', '#1E7E34'],
     legend: { show: false },
@@ -1102,7 +1108,7 @@ function renderLandDonut(series, labels) {
   if (landDonutChart) { landDonutChart.destroy(); landDonutChart = null; }
   landDonutChart = new ApexCharts(document.getElementById('landDonutChart'), {
     series,
-    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    chart: { type: 'donut', width: '100%', fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
     labels,
     colors: ['#C9973A', '#1A5F5F', '#2A7F7F', '#1E7E34', '#8A5A2A', '#3D7A5F'],
     legend: { show: false },
