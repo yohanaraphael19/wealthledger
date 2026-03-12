@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WealthLedger · Portfolio Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root {
+    --bg:        #F5F3EE;
+    --surface:   #FFFFFF;
+    --surface2:  #F9F8F5;
+    --teal:      #1A5F5F;
+    --teal-mid:  #2A7F7F;
+    --teal-lt:   #E4F0F0;
+    --navy:      #1B2A4A;
+    --gold:      #C9973A;
+    --gold-lt:   #FEF6E4;
+    --green:     #1E7E34;
+    --green-lt:  #E8F5EC;
+    --red:       #C0392B;
+    --red-lt:    #FDECEA;
+    --muted:     #8A8680;
+    --border:    #E2DED6;
+    --text:      #1B2A4A;
+    --shadow:    0 2px 12px rgba(27,42,74,0.07);
+    --shadow-lg: 0 8px 32px rgba(27,42,74,0.11);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--teal);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-logo {
+    width: 32px; height: 32px;
+    background: var(--gold);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .last-updated {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    font-family: 'DM Mono', monospace;
+  }
+  .refresh-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+  }
+
+  /* ── LOADING / ERROR ── */
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--teal-lt);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 14px; }
+  .error-box {
+    background: var(--red-lt);
+    border: 1px solid #f5c6c2;
+    border-radius: 12px;
+    padding: 20px 24px;
+    color: var(--red);
+    font-size: 14px;
+    margin: 32px 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--teal) 0%, #0D3D3D 100%);
+    border-radius: 20px;
+    padding: 36px 40px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 240px; height: 240px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: 120px;
+    width: 160px; height: 160px;
+    background: rgba(201,151,58,0.08);
+    border-radius: 50%;
+  }
+  .hero-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 8px;
+  }
+  .hero-value {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 6px;
+    cursor: default;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-currency {
+    font-size: 0.45em;
+    font-weight: 600;
+    opacity: 0.7;
+    vertical-align: top;
+    margin-top: 8px;
+    margin-right: 4px;
+  }
+  .hero-breakdown {
+    display: none;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    animation: fadeIn 0.2s ease;
+  }
+  .hero-breakdown.show { display: flex; }
+  .hero-bd-item { }
+  .hero-bd-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 4px;
+  }
+  .hero-bd-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+  }
+  .hero-bd-pct {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 2px;
+  }
+  .hero-hover-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── 4-CARD ROW ── */
+  .cards-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: box-shadow 0.2s, transform 0.2s;
+    cursor: default;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .card-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge.pos { background: var(--green-lt); color: var(--green); }
+  .badge.neg { background: var(--red-lt); color: var(--red); }
+  .badge.neu { background: var(--teal-lt); color: var(--teal); }
+
+  /* hover dropdown */
+  .card-dropdown {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    animation: fadeIn 0.15s ease;
+  }
+  .card-dropdown.show { display: block; }
+  .dropdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+  }
+  .dropdown-row + .dropdown-row { border-top: 1px solid var(--bg); }
+  .dropdown-ticker {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    letter-spacing: 0.5px;
+  }
+  .dropdown-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--teal-mid);
+    font-weight: 500;
+  }
+  .dropdown-hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ── TIME SERIES ── */
+  .chart-section {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 24px 24px 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .chart-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .toggle-group {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 8px;
+  }
+  .toggle-btn {
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .toggle-btn.active {
+    background: var(--surface);
+    color: var(--teal);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  /* ── BOTTOM 3 CARDS ── */
+  .bottom-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .bcard {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .bcard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .bcard-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 0.2px;
+  }
+  .bcard-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Stock card */
+  .stock-donut-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .donut-container { flex-shrink: 0; }
+  .stock-tickers { flex: 1; }
+  .ticker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--bg);
+  }
+  .ticker-row:last-child { border-bottom: none; }
+  .ticker-left { display: flex; align-items: center; gap: 8px; }
+  .ticker-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ticker-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    font-family: 'DM Mono', monospace;
+  }
+  .ticker-pct {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .ticker-right { text-align: right; }
+  .ticker-pnl {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .ticker-pnl-pct {
+    font-size: 10px;
+    margin-top: 1px;
+  }
+  .pos-text { color: var(--green); }
+  .neg-text { color: var(--red); }
+  .neu-text { color: var(--muted); }
+
+  /* Land card */
+  .land-stats { display: flex; flex-direction: column; gap: 12px; }
+  .land-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 10px;
+  }
+  .land-stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .land-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  /* Opportunity cost card */
+  .opp-total {
+    background: var(--red-lt);
+    border: 1px solid #f5c6c2;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .opp-total-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  .opp-total-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .opp-events { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+  .opp-event {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 11px 14px;
+    border-left: 3px solid var(--red);
+  }
+  .opp-event-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .opp-event-ticker {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    font-family: 'DM Mono', monospace;
+  }
+  .opp-event-date {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .opp-event-body { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .opp-kv { }
+  .opp-kv-label { font-size: 9px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .opp-kv-val { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; color: var(--navy); }
+  .opp-kv-val.red { color: var(--red); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .cards-row { grid-template-columns: repeat(2, 1fr); }
+    .bottom-cards { grid-template-columns: 1fr; }
+    .hero { padding: 24px 22px; }
+  }
+  @media (max-width: 560px) {
+    .cards-row { grid-template-columns: 1fr; }
+    .container { padding: 16px 14px 40px; }
+    .header { padding: 14px 16px; }
+    .header-sub { display: none; }
+  }
+
+  /* ── DIVIDER ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    margin-top: 4px;
+    padding-left: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">WL</div>
+    <div>
+      <div class="header-title">WealthLedger</div>
+      <div class="header-sub">DSE Portfolio Dashboard · All values in TZS</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">Loading…</span>
+    <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="container">
+  <div id="loadingScreen" class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Fetching your portfolio data…</div>
+  </div>
+  <div id="errorBox" class="error-box" style="display:none"></div>
+  <div id="dashboard" style="display:none">
+
+    <!-- HERO -->
+    <div class="hero" id="heroCard">
+      <div class="hero-label">Total Net Worth</div>
+      <div class="hero-value" id="heroValue"><span class="hero-currency">TZS</span><span id="heroNum">—</span></div>
+      <div class="hero-hover-hint" id="heroHint">▾ tap to see breakdown</div>
+      <div class="hero-breakdown" id="heroBreakdown">
+        <div class="hero-bd-item">
+          <div class="hero-bd-label">Stocks</div>
+          <div class="hero-bd-val" id="bdStocks">—</div>
+          <div class="hero-bd-pct" id="bdStocksPct">—</div>
+        </div>
+        <div class="hero-bd-item">
+          <div class="hero-bd-label">Land</div>
+          <div class="hero-bd-val" id="bdLand">—</div>
+          <div class="hero-bd-pct" id="bdLandPct">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 CARDS -->
+    <div class="section-label">Portfolio Overview</div>
+    <div class="cards-row">
+
+      <!-- Stock Value -->
+      <div class="card" onclick="toggleDropdown('stockValDrop')">
+        <div class="card-label">Stock Portfolio Value</div>
+        <div class="card-value" id="cardStockVal">—</div>
+        <div class="card-sub">Tap to see breakdown ▾</div>
+        <div class="card-dropdown" id="stockValDrop">
+          <div id="stockValRows"></div>
+          <div class="dropdown-hint">Current market value per ticker</div>
+        </div>
+      </div>
+
+      <!-- Total Shares -->
+      <div class="card" onclick="toggleDropdown('sharesDrop')">
+        <div class="card-label">Total Shares Held</div>
+        <div class="card-value" id="cardTotalShares">—</div>
+        <div class="card-sub">Tap to see breakdown ▾</div>
+        <div class="card-dropdown" id="sharesDrop">
+          <div id="sharesRows"></div>
+          <div class="dropdown-hint">Net shares after all sells</div>
+        </div>
+      </div>
+
+      <!-- Unrealized P&L -->
+      <div class="card">
+        <div class="card-label">Unrealized P&amp;L</div>
+        <div class="card-value" id="cardPnl">—</div>
+        <div class="card-sub" id="cardPnlSub">vs cost basis</div>
+      </div>
+
+      <!-- Land Value -->
+      <div class="card">
+        <div class="card-label">Land Portfolio Value</div>
+        <div class="card-value" id="cardLandVal">—</div>
+        <div class="card-sub" id="cardLandSub">across all plots</div>
+      </div>
+
+    </div>
+
+    <!-- TIME SERIES -->
+    <div class="section-label">Investment Journey</div>
+    <div class="chart-section">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Capital Deployed</div>
+          <div class="chart-sub">Bars = monthly investment · Line = cumulative total</div>
+        </div>
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="filterChart(3,this)">3M</button>
+          <button class="toggle-btn" onclick="filterChart(6,this)">6M</button>
+          <button class="toggle-btn" onclick="filterChart(12,this)">1Y</button>
+          <button class="toggle-btn active" onclick="filterChart(0,this)">Max</button>
+        </div>
+      </div>
+      <div id="timeSeriesChart"></div>
+    </div>
+
+    <!-- BOTTOM 3 CARDS -->
+    <div class="section-label">Asset Breakdown</div>
+    <div class="bottom-cards">
+
+      <!-- STOCKS -->
+      <div class="bcard">
+        <div class="bcard-header">
+          <div class="bcard-title">Stock Holdings</div>
+          <div class="bcard-icon" style="background:var(--teal-lt)">📈</div>
+        </div>
+        <div class="stock-donut-wrap">
+          <div class="donut-container"><div id="donutChart"></div></div>
+          <div class="stock-tickers" id="stockTickers"></div>
+        </div>
+      </div>
+
+      <!-- LAND -->
+      <div class="bcard">
+        <div class="bcard-header">
+          <div class="bcard-title">Land Portfolio</div>
+          <div class="bcard-icon" style="background:var(--gold-lt)">🏞️</div>
+        </div>
+        <div class="land-stats" id="landStats"></div>
+      </div>
+
+      <!-- OPPORTUNITY COST -->
+      <div class="bcard">
+        <div class="bcard-header">
+          <div class="bcard-title">Opportunity Cost</div>
+          <div class="bcard-icon" style="background:var(--red-lt)">📉</div>
+        </div>
+        <div class="opp-total">
+          <div class="opp-total-label">Total left on table</div>
+          <div class="opp-total-val" id="oppTotal">—</div>
+        </div>
+        <div class="opp-events" id="oppEvents"></div>
+      </div>
+
+    </div>
+  </div><!-- /dashboard -->
+</div><!-- /container -->
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const SHEET_ID = '1zv-9vD6VsfCcDgr-PH92_IEaGzZPbuTMRGYawrBkaHo';
+const API_KEY  = 'AIzaSyCEunEzrjVDASNRWX57yZcMJPPrHFrBcyY';
+const BROKER   = 0.024;
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt  = n => 'TZS ' + Math.round(n).toLocaleString('en-US');
+const fmtN = n => Math.round(n).toLocaleString('en-US');
+const fmtP = n => (n >= 0 ? '+' : '') + (n * 100).toFixed(1) + '%';
+const parseDate = s => { if (!s) return null; const d = new Date(s); return isNaN(d) ? null : d; };
+// Sheets returns numbers as strings with commas e.g. "8,010,000" — strip commas first
+const parseNum = s => { if (s === null || s === undefined || s === '') return 0; return parseFloat(String(s).replace(/,/g, '')) || 0; };
+const monthKey  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+
+async function fetchSheet(range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`API error ${r.status}: ${await r.text()}`);
+  const j = await r.json();
+  return j.values || [];
+}
+
+function toggleDropdown(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('show');
+}
+
+function toggleHero() {
+  document.getElementById('heroBreakdown').classList.toggle('show');
+  const hint = document.getElementById('heroHint');
+  hint.textContent = document.getElementById('heroBreakdown').classList.contains('show')
+    ? '▴ tap to collapse' : '▾ tap to see breakdown';
+}
+document.getElementById('heroCard').addEventListener('click', toggleHero);
+
+// ── CHART INSTANCES ──────────────────────────────────────────────────────────
+let tsChart = null, donutChart = null;
+let allMonthlyData = [];
+
+// ── MAIN LOAD ────────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('loadingScreen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+
+  try {
+    const [stockRows, soldRows, landRows, priceRows] = await Promise.all([
+      fetchSheet("'Stock Holdings'!A5:O42"),
+      fetchSheet("'Sold Trades'!A5:H34"),
+      fetchSheet("'Land & Plots'!A5:P27"),
+      fetchSheet("'Stock Holdings'!R3:T22"),
+    ]);
+
+    // Build price map
+    const prices = {};
+    priceRows.forEach(r => { if (r[0] && r[2]) prices[r[0].trim()] = parseNum(r[2]); });
+
+    // ── Parse stock holdings ────────────────────────────────────────────────
+    const trades = stockRows
+      .filter(r => r[3] && r[4] && r[5]) // ticker, shares, price
+      .map(r => ({
+        date:    parseDate(r[1]),
+        company: r[2] || '',
+        ticker:  r[3].trim(),
+        shares:   parseNum(r[4]),
+        buyPrice: parseNum(r[5]),
+        totalPaid: parseNum(r[4]) * parseNum(r[5]) || 0,
+      }));
+
+    // ── Parse sold trades ───────────────────────────────────────────────────
+    const sells = soldRows
+      .filter(r => r[2] && r[3] && r[4])
+      .map(r => ({
+        date:       parseDate(r[0]),
+        company:    r[1] || '',
+        ticker:     r[2].trim(),
+        sharesSold: parseNum(r[3]),
+        sellPrice:  parseNum(r[4]),
+      }));
+
+    // ── Parse land ──────────────────────────────────────────────────────────
+    const plots = landRows
+      .filter(r => r[8] || r[10]) // purchase price or true cost
+      .map(r => ({
+        block:    r[0] || '',
+        plotNo:   r[1] || '',
+        region:   r[2] || '',
+        size:     r[5] || '',
+        purchasePrice: parseNum(r[8]),
+        titleFee:      parseNum(r[9]),
+        trueCost:      parseNum(r[8]) + parseNum(r[9]),
+        currentVal:    parseNum(r[11]),
+      }));
+
+    // ── Net shares per ticker ───────────────────────────────────────────────
+    const bought = {}, sold = {};
+    trades.forEach(t => { bought[t.ticker] = (bought[t.ticker] || 0) + t.shares; });
+    sells.forEach(s => { sold[s.ticker] = (sold[s.ticker] || 0) + s.sharesSold; });
+    const tickers = [...new Set(Object.keys(bought))];
+    const netShares = {};
+    tickers.forEach(tk => { netShares[tk] = (bought[tk] || 0) - (sold[tk] || 0); });
+
+    // ── Cost basis ──────────────────────────────────────────────────────────
+    const costByTicker = {};
+    trades.forEach(t => {
+      const trueCost = t.totalPaid * (1 + BROKER);
+      costByTicker[t.ticker] = (costByTicker[t.ticker] || 0) + trueCost;
+    });
+    // Adjust for sells (remove cost of sold shares proportionally)
+    sells.forEach(s => {
+      const avgCost = costByTicker[s.ticker] / ((bought[s.ticker] || 1));
+      costByTicker[s.ticker] = Math.max(0, (costByTicker[s.ticker] || 0) - avgCost * s.sharesSold);
+    });
+
+    // ── Stock values ────────────────────────────────────────────────────────
+    const stockValues = {};
+    tickers.forEach(tk => { stockValues[tk] = netShares[tk] * (prices[tk] || 0); });
+    const totalStockVal = Object.values(stockValues).reduce((a, b) => a + b, 0);
+    const totalCostBasis = Object.values(costByTicker).reduce((a, b) => a + b, 0);
+    const unrealizedPnL = totalStockVal - totalCostBasis;
+    const pnlPct = totalCostBasis > 0 ? unrealizedPnL / totalCostBasis : 0;
+
+    // ── Land totals ─────────────────────────────────────────────────────────
+    const totalLandVal  = plots.reduce((a, p) => a + p.currentVal, 0);
+    const totalLandCost = plots.reduce((a, p) => a + p.trueCost, 0);
+    const totalLandGain = totalLandVal - totalLandCost;
+    const totalSqm = plots.reduce((a, p) => {
+      const n = parseFloat(String(p.size).replace(/[^0-9.]/g, ''));
+      return a + (isNaN(n) ? 0 : n);
+    }, 0);
+
+    // ── Net worth ───────────────────────────────────────────────────────────
+    const netWorth = totalStockVal + totalLandVal;
+
+    // ── Monthly investment data ─────────────────────────────────────────────
+    const monthlyInv = {};
+    trades.forEach(t => {
+      if (!t.date) return;
+      const k = monthKey(t.date);
+      monthlyInv[k] = (monthlyInv[k] || 0) + t.totalPaid;
+    });
+    const sortedMonths = Object.keys(monthlyInv).sort();
+    let cumulative = 0;
+    allMonthlyData = sortedMonths.map(m => {
+      cumulative += monthlyInv[m];
+      return { month: m, invested: monthlyInv[m], cumulative };
+    });
+
+    // ── Opportunity cost ────────────────────────────────────────────────────
+    const oppEvents = sells.map(s => {
+      const currentPrice = prices[s.ticker] || 0;
+      const brokerFee = s.sharesSold * s.sellPrice * BROKER;
+      const netProceeds = s.sharesSold * s.sellPrice - brokerFee;
+      const worthNow = s.sharesSold * currentPrice;
+      const leftOnTable = worthNow - netProceeds;
+      return { ...s, netProceeds, worthNow, leftOnTable };
+    });
+    const totalLeftOnTable = oppEvents.reduce((a, e) => a + e.leftOnTable, 0);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // RENDER
+    // ════════════════════════════════════════════════════════════════════════
+
+    // Hero
+    document.getElementById('heroNum').textContent = fmtN(netWorth);
+    document.getElementById('bdStocks').textContent = fmt(totalStockVal);
+    document.getElementById('bdStocksPct').textContent = (netWorth > 0 ? ((totalStockVal/netWorth)*100).toFixed(1) : '0') + '% of net worth';
+    document.getElementById('bdLand').textContent = fmt(totalLandVal);
+    document.getElementById('bdLandPct').textContent = (netWorth > 0 ? ((totalLandVal/netWorth)*100).toFixed(1) : '0') + '% of net worth';
+
+    // Card: Stock Value
+    document.getElementById('cardStockVal').textContent = fmt(totalStockVal);
+    const svRows = document.getElementById('stockValRows');
+    svRows.innerHTML = tickers.map(tk => `
+      <div class="dropdown-row">
+        <span class="dropdown-ticker">${tk}</span>
+        <span class="dropdown-val">${fmt(stockValues[tk])}</span>
+      </div>`).join('');
+
+    // Card: Shares
+    const totalSharesAll = Object.values(netShares).reduce((a,b) => a+b, 0);
+    document.getElementById('cardTotalShares').textContent = fmtN(totalSharesAll) + ' sh';
+    const shRows = document.getElementById('sharesRows');
+    shRows.innerHTML = tickers.map(tk => `
+      <div class="dropdown-row">
+        <span class="dropdown-ticker">${tk}</span>
+        <span class="dropdown-val">${fmtN(netShares[tk])} sh</span>
+      </div>`).join('');
+
+    // Card: P&L
+    const pnlEl = document.getElementById('cardPnl');
+    pnlEl.textContent = fmt(unrealizedPnL);
+    pnlEl.style.color = unrealizedPnL >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('cardPnlSub').innerHTML =
+      `<span class="badge ${unrealizedPnL >= 0 ? 'pos' : 'neg'}">${unrealizedPnL >= 0 ? '↑' : '↓'} ${fmtP(pnlPct)}</span>`;
+
+    // Card: Land
+    document.getElementById('cardLandVal').textContent = fmt(totalLandVal);
+    document.getElementById('cardLandSub').textContent = `${plots.length} plots · ${Math.round(totalSqm).toLocaleString()} sqm`;
+
+    // Time series chart
+    renderTimeSeriesChart(allMonthlyData);
+
+    // Donut chart
+    const donutSeries = tickers.map(tk => Math.round(stockValues[tk]));
+    const donutLabels = tickers;
+    renderDonut(donutSeries, donutLabels);
+
+    // Ticker rows (stock card)
+    const donutColors = ['#1A5F5F', '#C9973A', '#2A7F7F', '#1E7E34'];
+    const tickerHTML = tickers.map((tk, i) => {
+      const val = stockValues[tk];
+      const cost = costByTicker[tk] || 0;
+      const pnl = val - cost;
+      const pct = cost > 0 ? pnl / cost : 0;
+      const share = totalStockVal > 0 ? (val / totalStockVal * 100).toFixed(0) : 0;
+      const cls = pnl >= 0 ? 'pos-text' : 'neg-text';
+      const arr = pnl >= 0 ? '↑' : '↓';
+      return `
+        <div class="ticker-row">
+          <div class="ticker-left">
+            <div class="ticker-dot" style="background:${donutColors[i % donutColors.length]}"></div>
+            <div>
+              <div class="ticker-name">${tk}</div>
+              <div class="ticker-pct">${share}% of stocks</div>
+            </div>
+          </div>
+          <div class="ticker-right">
+            <div class="ticker-pnl ${cls}">${arr} ${fmt(pnl)}</div>
+            <div class="ticker-pnl-pct ${cls}">${fmtP(pct)}</div>
+          </div>
+        </div>`;
+    }).join('');
+    document.getElementById('stockTickers').innerHTML = tickerHTML;
+
+    // Land stats card
+    const landGainCls = totalLandGain >= 0 ? 'pos-text' : 'neg-text';
+    const landGainSign = totalLandGain >= 0 ? '+' : '';
+    document.getElementById('landStats').innerHTML = `
+      <div class="land-stat-row">
+        <span class="land-stat-label">Total Cost Basis</span>
+        <span class="land-stat-val">${fmt(totalLandCost)}</span>
+      </div>
+      <div class="land-stat-row">
+        <span class="land-stat-label">Current Value</span>
+        <span class="land-stat-val">${fmt(totalLandVal)}</span>
+      </div>
+      <div class="land-stat-row">
+        <span class="land-stat-label">Gain / Loss</span>
+        <span class="land-stat-val ${landGainCls}">${landGainSign}${fmt(totalLandGain)}</span>
+      </div>
+      <div class="land-stat-row">
+        <span class="land-stat-label">Total Area</span>
+        <span class="land-stat-val">${Math.round(totalSqm).toLocaleString()} sqm</span>
+      </div>
+      <div class="land-stat-row">
+        <span class="land-stat-label">Number of Plots</span>
+        <span class="land-stat-val">${plots.length}</span>
+      </div>`;
+
+    // Opportunity cost
+    document.getElementById('oppTotal').textContent = fmt(totalLeftOnTable);
+    document.getElementById('oppEvents').innerHTML = oppEvents.map(e => {
+      const d = e.date ? e.date.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const leftCls = e.leftOnTable >= 0 ? 'red' : 'pos-text';
+      return `
+        <div class="opp-event">
+          <div class="opp-event-top">
+            <span class="opp-event-ticker">${e.ticker} · ${fmtN(e.sharesSold)} sh @ ${fmtN(e.sellPrice)}</span>
+            <span class="opp-event-date">${d}</span>
+          </div>
+          <div class="opp-event-body">
+            <div class="opp-kv">
+              <div class="opp-kv-label">You received</div>
+              <div class="opp-kv-val">${fmt(e.netProceeds)}</div>
+            </div>
+            <div class="opp-kv">
+              <div class="opp-kv-label">Worth today</div>
+              <div class="opp-kv-val">${fmt(e.worthNow)}</div>
+            </div>
+            <div class="opp-kv" style="grid-column:1/-1">
+              <div class="opp-kv-label">Left on table</div>
+              <div class="opp-kv-val ${leftCls}">${e.leftOnTable >= 0 ? '+' : ''}${fmt(e.leftOnTable)}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Last updated
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+  } catch(err) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'block';
+    document.getElementById('errorBox').textContent = '⚠ Could not load data: ' + err.message;
+    console.error(err);
+  }
+}
+
+// ── TIME SERIES CHART ────────────────────────────────────────────────────────
+function renderTimeSeriesChart(data) {
+  if (tsChart) { tsChart.destroy(); tsChart = null; }
+  const months  = data.map(d => {
+    const [y, m] = d.month.split('-');
+    return new Date(+y, +m - 1).toLocaleDateString('en-US', {month:'short', year:'2-digit'});
+  });
+  const bars = data.map(d => Math.round(d.invested));
+  const line = data.map(d => Math.round(d.cumulative));
+
+  tsChart = new ApexCharts(document.getElementById('timeSeriesChart'), {
+    series: [
+      { name: 'Monthly Invested', type: 'bar',  data: bars },
+      { name: 'Cumulative Total', type: 'line', data: line }
+    ],
+    chart: { height: 260, type: 'line', toolbar: { show: false }, fontFamily: 'DM Sans, sans-serif', animations: { enabled: true, speed: 600 } },
+    colors: ['#1A5F5F', '#C9973A'],
+    stroke: { width: [0, 2.5], curve: 'smooth' },
+    fill: { opacity: [0.85, 1] },
+    plotOptions: { bar: { borderRadius: 5, columnWidth: '55%' } },
+    dataLabels: { enabled: false },
+    xaxis: { categories: months, labels: { style: { fontSize: '11px', colors: '#8A8680' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: [
+      { labels: { formatter: v => 'TZS ' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K'), style: { fontSize: '10px', colors: '#8A8680' } } },
+      { opposite: true, labels: { formatter: v => (v/1e6).toFixed(1)+'M', style: { fontSize: '10px', colors: '#C9973A' } } }
+    ],
+    tooltip: {
+      shared: true,
+      y: [{ formatter: v => fmt(v) }, { formatter: v => fmt(v) }]
+    },
+    legend: { position: 'top', fontSize: '12px', fontWeight: 500, markers: { radius: 4 } },
+    grid: { borderColor: '#F0EDE8', strokeDashArray: 4 },
+  });
+  tsChart.render();
+}
+
+// ── FILTER CHART ─────────────────────────────────────────────────────────────
+function filterChart(months, btn) {
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  let filtered = allMonthlyData;
+  if (months > 0) {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const cutoffKey = monthKey(cutoff);
+    filtered = allMonthlyData.filter(d => d.month >= cutoffKey);
+  }
+  renderTimeSeriesChart(filtered);
+}
+
+// ── DONUT CHART ───────────────────────────────────────────────────────────────
+function renderDonut(series, labels) {
+  if (donutChart) { donutChart.destroy(); donutChart = null; }
+  donutChart = new ApexCharts(document.getElementById('donutChart'), {
+    series,
+    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    labels,
+    colors: ['#1A5F5F', '#C9973A', '#2A7F7F', '#1E7E34'],
+    legend: { show: false },
+    dataLabels: { enabled: false },
+    plotOptions: { pie: { donut: { size: '68%' } } },
+    stroke: { width: 2, colors: ['#fff'] },
+    tooltip: { y: { formatter: v => fmt(v) } },
+  });
+  donutChart.render();
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
