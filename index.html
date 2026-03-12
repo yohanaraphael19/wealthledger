@@ -417,13 +417,7 @@
     align-items: center;
     gap: 20px;
   }
-  .donut-container {
-    flex-shrink: 0;
-    width: clamp(110px, 22%, 190px);
-  }
-  .donut-container > div {
-    width: 100% !important;
-  }
+  .donut-container { flex-shrink: 0; }
   .stock-tickers { flex: 1; }
   .ticker-row {
     display: flex;
@@ -541,6 +535,85 @@
   /* ── RESPONSIVE ── */
   @media (max-width: 900px) {
     .cards-row { grid-template-columns: repeat(2, 1fr); }
+  /* ── AI SECTION ─────────────────────────────────────────────────────────── */
+  .ai-section {
+    margin: 28px 0 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
+  }
+  .ai-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, #0f3535 0%, #1A5F5F 100%);
+    cursor: pointer; user-select: none;
+  }
+  .ai-section-header-left { display: flex; align-items: center; gap: 12px; }
+  .ai-section-title { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: .3px; }
+  .ai-section-subtitle { font-size: 11px; color: rgba(255,255,255,.65); margin-top: 2px; }
+  .ai-badge {
+    background: var(--gold); color: #000; font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px; letter-spacing: .5px;
+  }
+  .ai-chevron { color: rgba(255,255,255,.7); font-size: 18px; transition: transform .3s; }
+  .ai-chevron.open { transform: rotate(180deg); }
+  .ai-body { display: none; padding: 20px 22px 24px; }
+  .ai-body.open { display: block; }
+
+  /* insight cards row */
+  .ai-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+  @media(max-width:900px){ .ai-cards { grid-template-columns: repeat(2,1fr); } }
+  @media(max-width:500px){ .ai-cards { grid-template-columns: 1fr; } }
+  .ai-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .ai-card-icon { font-size: 20px; margin-bottom: 6px; }
+  .ai-card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .ai-card-value { font-size: 13px; font-weight: 700; color: var(--navy); line-height: 1.4; }
+  .ai-card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .ai-generated { font-size: 10px; color: var(--muted); margin-bottom: 16px; }
+
+  /* chat */
+  .ai-chat-title { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; display:flex; align-items:center; gap:8px; }
+  .ai-chat-limit { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .ai-messages {
+    min-height: 80px; max-height: 320px; overflow-y: auto;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .ai-msg { display: flex; gap: 10px; align-items: flex-start; }
+  .ai-msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .ai-msg.user .ai-msg-avatar { background: var(--teal); color: #fff; }
+  .ai-msg.bot  .ai-msg-avatar { background: var(--gold-lt); }
+  .ai-msg-text { font-size: 12px; line-height: 1.6; color: var(--navy); padding-top: 4px; }
+  .ai-msg.user .ai-msg-text { color: var(--teal); font-weight: 500; }
+  .ai-input-row { display: flex; gap: 10px; }
+  .ai-input {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-size: 13px; font-family: inherit;
+    background: var(--bg); color: var(--navy); outline: none;
+    transition: border-color .2s;
+  }
+  .ai-input:focus { border-color: var(--teal); }
+  .ai-send {
+    background: var(--teal); color: #fff; border: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: opacity .2s; white-space: nowrap;
+  }
+  .ai-send:disabled { opacity: .45; cursor: not-allowed; }
+  .ai-limit-bar { margin-top: 10px; }
+  .ai-limit-track {
+    height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 4px;
+  }
+  .ai-limit-fill { height: 100%; background: var(--teal); border-radius: 4px; transition: width .4s; }
+  .ai-limit-label { font-size: 10px; color: var(--muted); }
+
     .bottom-cards { grid-template-columns: 1fr; }
     .hero { padding: 24px 22px; }
   }
@@ -572,7 +645,7 @@
     <div class="header-logo">WL</div>
     <div>
       <div class="header-title">WealthLedger</div>
-      <div class="header-sub">Stocks · Land · Legacy &nbsp;·&nbsp; All values in TZS</div>
+      <div class="header-sub">DSE Portfolio Dashboard · All values in TZS</div>
     </div>
   </div>
   <div class="header-right">
@@ -715,6 +788,54 @@
       </div>
 
     </div>
+
+    <!-- ── AI INSIGHTS SECTION ─────────────────────────────────────────── -->
+    <div class="ai-section">
+      <div class="ai-section-header" onclick="toggleAI()">
+        <div class="ai-section-header-left">
+          <div>
+            <div class="ai-section-title">🤖 AI Portfolio Advisor</div>
+            <div class="ai-section-subtitle">Powered by Gemini 3 Flash · Tap to expand</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="ai-badge">GEMINI</span>
+          <span class="ai-chevron" id="aiChevron">▾</span>
+        </div>
+      </div>
+      <div class="ai-body" id="aiBody">
+        <div class="ai-generated" id="aiGenerated">Loading latest analysis...</div>
+        <!-- Insight Cards -->
+        <div class="ai-cards" id="aiCards">
+          <div class="ai-card"><div class="ai-card-icon">💊</div><div class="ai-card-label">Portfolio Health</div><div class="ai-card-value" id="aiHealth">—</div><div class="ai-card-sub" id="aiHealthSub"></div></div>
+          <div class="ai-card"><div class="ai-card-icon">📈</div><div class="ai-card-label">5-Year Projection</div><div class="ai-card-value" id="aiProjection">—</div><div class="ai-card-sub" id="aiProjectionSub"></div></div>
+          <div class="ai-card"><div class="ai-card-icon">🎯</div><div class="ai-card-label">Top Buy Pick</div><div class="ai-card-value" id="aiBuy">—</div><div class="ai-card-sub" id="aiBuySub"></div></div>
+          <div class="ai-card"><div class="ai-card-icon">⚡</div><div class="ai-card-label">30-Day Action</div><div class="ai-card-value" id="aiAction">—</div><div class="ai-card-sub" id="aiActionSub"></div></div>
+        </div>
+        <!-- Chat -->
+        <div style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px;">
+          <div class="ai-chat-title">
+            Ask your AI Advisor
+            <span class="ai-chat-limit" id="chatLimitLabel"></span>
+          </div>
+          <div class="ai-messages" id="aiMessages">
+            <div class="ai-msg bot">
+              <div class="ai-msg-avatar">🤖</div>
+              <div class="ai-msg-text">Hello! I have your full portfolio context. Ask me anything about your DSE investments, risk, dividends, or strategy.</div>
+            </div>
+          </div>
+          <div class="ai-input-row">
+            <input class="ai-input" id="aiInput" type="text" placeholder="e.g. Should I sell some CRDB now?" onkeydown="if(event.key==='Enter')sendAIChat()"/>
+            <button class="ai-send" id="aiSendBtn" onclick="sendAIChat()">Send</button>
+          </div>
+          <div class="ai-limit-bar">
+            <div class="ai-limit-track"><div class="ai-limit-fill" id="aiLimitFill" style="width:0%"></div></div>
+            <div class="ai-limit-label" id="aiLimitText">0 / 10 questions used today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /dashboard -->
 </div><!-- /container -->
 
@@ -1091,7 +1212,7 @@ function renderDonut(series, labels) {
   if (donutChart) { donutChart.destroy(); donutChart = null; }
   donutChart = new ApexCharts(document.getElementById('donutChart'), {
     series,
-    chart: { type: 'donut', width: '100%', fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
     labels,
     colors: ['#1A5F5F', '#C9973A', '#2A7F7F', '#1E7E34'],
     legend: { show: false },
@@ -1108,7 +1229,7 @@ function renderLandDonut(series, labels) {
   if (landDonutChart) { landDonutChart.destroy(); landDonutChart = null; }
   landDonutChart = new ApexCharts(document.getElementById('landDonutChart'), {
     series,
-    chart: { type: 'donut', width: '100%', fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
+    chart: { type: 'donut', width: 110, fontFamily: 'DM Sans, sans-serif', animations: { speed: 600 } },
     labels,
     colors: ['#C9973A', '#1A5F5F', '#2A7F7F', '#1E7E34', '#8A5A2A', '#3D7A5F'],
     legend: { show: false },
@@ -1118,6 +1239,174 @@ function renderLandDonut(series, labels) {
     tooltip: { y: { formatter: v => fmt(v) } },
   });
   landDonutChart.render();
+}
+
+// ── AI SECTION ────────────────────────────────────────────────────────────────
+const GEMINI_KEY = 'AIzaSyBMp-QEq6O44dYdpQOeCscB0JS-z4XUjsM';
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + GEMINI_KEY;
+const CHAT_LIMIT = 10;
+const TODAY_KEY  = () => new Date().toISOString().slice(0,10);
+
+// Question counter — stored in memory (resets on page reload, good enough for daily limit)
+let chatCountToday = 0;
+let portfolioContext = '';
+
+function toggleAI() {
+  const body    = document.getElementById('aiBody');
+  const chevron = document.getElementById('aiChevron');
+  const isOpen  = body.classList.toggle('open');
+  chevron.classList.toggle('open', isOpen);
+  if (isOpen && !body.dataset.loaded) {
+    body.dataset.loaded = '1';
+    loadAIInsights();
+  }
+}
+
+async function loadAIInsights() {
+  try {
+    const range = 'AI_Insights!A1:A10';
+    const data  = await fetchSheet(range);
+    const rows  = data.values || [];
+    // Row 0 = title, Row 1 = generated date, Row 3 = full analysis text
+    if (rows[1]) document.getElementById('aiGenerated').textContent = rows[1][0] || '';
+    const fullText = rows.slice(3).map(r => r[0] || '').join('\n');
+
+    // Parse sections from markdown headers
+    const health     = extractSection(fullText, '1. PORTFOLIO HEALTH', '2.');
+    const projection = extractSection(fullText, '2. 5-YEAR PROJECTION', '3.');
+    const buys       = extractSection(fullText, '3. TOP BUY OPPORTUNITIES', '4.');
+    const action     = extractSection(fullText, '6. 30-DAY ACTION PLAN', '###');
+
+    // Health card
+    const healthMatch = health.match(/\*\*Status:\s*([^*]+)\*\*/i);
+    document.getElementById('aiHealth').textContent = healthMatch ? healthMatch[1].trim() : 'See full report';
+    document.getElementById('aiHealthSub').textContent = extractBullet(health, 'Concentration');
+
+    // Projection card — grab moderate scenario
+    const modMatch = projection.match(/Moderate[^:]*:\*\*\s*(TZS[\s\d,]+)/i);
+    document.getElementById('aiProjection').textContent = modMatch ? modMatch[1].trim() : '—';
+    document.getElementById('aiProjectionSub').textContent = 'Moderate 10% CAGR scenario';
+
+    // Top buy card
+    const buyMatch = buys.match(/\*\*([\w\s()]+):\s*\(Last/i) || buys.match(/1\.\s*\*\*([\w\s()]+)\*\*/i);
+    document.getElementById('aiBuy').textContent = buyMatch ? buyMatch[1].trim() : extractFirstTicker(buys);
+    document.getElementById('aiBuySub').textContent = extractBullet(buys, 'Reason') || extractBullet(buys, 'yield');
+
+    // Action card
+    const actionMatch = action.match(/1\.\s*\*\*([^*:]+)[*:]/);
+    document.getElementById('aiAction').textContent = actionMatch ? actionMatch[1].trim() : 'See full report';
+    document.getElementById('aiActionSub').textContent = extractBullet(action, 'Diversif') || '';
+
+    // Build portfolio context string for chat
+    portfolioContext = fullText.slice(0, 1500); // use first 1500 chars as context
+
+  } catch(e) {
+    document.getElementById('aiGenerated').textContent = 'No analysis yet — run runAIAnalysis() in Apps Script first.';
+  }
+  updateLimitUI();
+}
+
+function extractSection(text, startMark, endMark) {
+  const si = text.indexOf(startMark);
+  if (si === -1) return '';
+  const ei = text.indexOf('### ' + endMark, si + 1);
+  return ei === -1 ? text.slice(si) : text.slice(si, ei);
+}
+
+function extractBullet(text, keyword) {
+  const lines = text.split('\n');
+  for (const l of lines) {
+    if (l.toLowerCase().includes(keyword.toLowerCase())) {
+      return l.replace(/\*\*/g,'').replace(/^\s*[\*\-]\s*/,'').slice(0,90);
+    }
+  }
+  return '';
+}
+
+function extractFirstTicker(text) {
+  const m = text.match(/\b([A-Z]{2,10})\b/);
+  return m ? m[1] : '—';
+}
+
+function updateLimitUI() {
+  const used = chatCountToday;
+  const pct  = (used / CHAT_LIMIT) * 100;
+  document.getElementById('aiLimitFill').style.width  = pct + '%';
+  document.getElementById('aiLimitText').textContent  = `${used} / ${CHAT_LIMIT} questions used today`;
+  document.getElementById('chatLimitLabel').textContent = `(${CHAT_LIMIT - used} remaining today)`;
+  const btn = document.getElementById('aiSendBtn');
+  btn.disabled = used >= CHAT_LIMIT;
+  if (used >= CHAT_LIMIT) {
+    document.getElementById('aiInput').placeholder = 'Daily limit reached. Come back tomorrow!';
+  }
+}
+
+function appendMessage(role, text) {
+  const box = document.getElementById('aiMessages');
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + role;
+  div.innerHTML = `
+    <div class="ai-msg-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+    <div class="ai-msg-text">${text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div>
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendAIChat() {
+  if (chatCountToday >= CHAT_LIMIT) return;
+  const input = document.getElementById('aiInput');
+  const q = input.value.trim();
+  if (!q) return;
+
+  input.value = '';
+  appendMessage('user', q);
+  document.getElementById('aiSendBtn').disabled = true;
+
+  // Show typing indicator
+  const typingId = 'typing_' + Date.now();
+  const box = document.getElementById('aiMessages');
+  const typing = document.createElement('div');
+  typing.className = 'ai-msg bot'; typing.id = typingId;
+  typing.innerHTML = `<div class="ai-msg-avatar">🤖</div><div class="ai-msg-text" style="color:var(--muted)">Thinking...</div>`;
+  box.appendChild(typing); box.scrollTop = box.scrollHeight;
+
+  try {
+    const prompt = `You are a DSE (Dar es Salaam Stock Exchange) financial advisor. 
+Here is the investor's current portfolio analysis for context:
+${portfolioContext}
+
+The investor asks: "${q}"
+
+Give a concise, specific answer using TZS values where relevant. Max 150 words.`;
+
+    const res = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+      })
+    });
+    const data = await res.json();
+    document.getElementById(typingId)?.remove();
+
+    if (data.candidates && data.candidates[0]) {
+      const reply = data.candidates[0].content.parts[0].text;
+      appendMessage('bot', reply);
+      chatCountToday++;
+    } else {
+      appendMessage('bot', 'Sorry, I could not get a response. Please try again.');
+    }
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    appendMessage('bot', 'Network error. Please check your connection.');
+  }
+
+  updateLimitUI();
+  if (chatCountToday < CHAT_LIMIT) {
+    document.getElementById('aiSendBtn').disabled = false;
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
