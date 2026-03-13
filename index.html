@@ -494,15 +494,25 @@ async function loadData(){
     const tickers=[...new Set(Object.keys(bought))];
     const netShares={};tickers.forEach(tk=>{netShares[tk]=(bought[tk]||0)-(soldQ[tk]||0);});
 
-    // Cost basis
+    // Per-ticker cost basis — same simple logic as total:
+    // invested(tk) = SUM(shares×price×1.024) for that ticker's buy rows
+    // received(tk) = SUM(sold_shares×sell_price×0.976) for that ticker's sell rows
+    const costInvested={}, costReceived={};
+    trades.forEach(t=>{costInvested[t.ticker]=(costInvested[t.ticker]||0)+t.totalPaid*(1+BROKER);});
+    sells.forEach(s=>{costReceived[s.ticker]=(costReceived[s.ticker]||0)+s.sharesSold*s.sellPrice*(1-BROKER);});
     const costByTicker={};
-    trades.forEach(t=>{costByTicker[t.ticker]=(costByTicker[t.ticker]||0)+t.totalPaid*(1+BROKER);});
-    sells.forEach(s=>{const avg=(costByTicker[s.ticker]||0)/(bought[s.ticker]||1);costByTicker[s.ticker]=Math.max(0,(costByTicker[s.ticker]||0)-avg*s.sharesSold);});
+    tickers.forEach(tk=>{costByTicker[tk]=(costInvested[tk]||0)-(costReceived[tk]||0);});
+
+    // Cost basis — correct formula:
+    // Total invested = SUM(shares_bought × buy_price × 1.024) across all buy rows
+    // Minus money received back = SUM(shares_sold × sell_price × 0.976) across all sell rows
+    const totalCostBasis =
+      trades.reduce((sum,t) => sum + t.totalPaid * (1 + BROKER), 0) -
+      sells.reduce((sum,s)  => sum + s.sharesSold * s.sellPrice * (1 - BROKER), 0);
 
     // Values
     const stockValues={};tickers.forEach(tk=>{stockValues[tk]=netShares[tk]*(prices[tk]||0);});
     const totalStockVal=Object.values(stockValues).reduce((a,b)=>a+b,0);
-    const totalCostBasis=Object.values(costByTicker).reduce((a,b)=>a+b,0);
     const unrealizedPnL=totalStockVal-totalCostBasis;
     const pnlPct=totalCostBasis>0?unrealizedPnL/totalCostBasis:0;
     const totalLandVal=plots.reduce((a,p)=>a+p.currentVal,0);
