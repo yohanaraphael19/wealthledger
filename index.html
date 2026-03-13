@@ -720,10 +720,12 @@ loadData();
 // ── TRADE LOGGER ─────────────────────────────────────────────────────────────
 function openLogModal() {
   document.getElementById('logModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   switchLogTab('BUY');
 }
 function closeLogModal() {
   document.getElementById('logModal').style.display = 'none';
+  document.body.style.overflow = '';
   document.getElementById('logResult').textContent = '';
 }
 function switchLogTab(tab) {
@@ -788,8 +790,8 @@ function showLogResult(msg, ok) {
 <button onclick="openLogModal()" style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;line-height:1;" title="Log a trade or plot">＋</button>
 
 <!-- LOG MODAL -->
-<div id="logModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
-  <div style="background:var(--card);border-radius:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+<div id="logModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);">
+  <div style="background:var(--card);border-radius:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;z-index:2001;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;">
       <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--navy)">Log Entry</div>
       <button onclick="closeLogModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">✕</button>
