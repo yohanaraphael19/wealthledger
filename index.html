@@ -359,7 +359,7 @@ const SHEET_ID    = '1zv-9vD6VsfCcDgr-PH92_IEaGzZPbuTMRGYawrBkaHo';
 const API_KEY     = 'AIzaSyCEunEzrjVDASNRWX57yZcMJPPrHFrBcyY';
 const PROXY_URL   = 'https://script.google.com/macros/s/AKfycbyxI8XGzt0RKYi-zdHgCSwCo9zffw1rskvwDJK1EF2CjPUn50qKG2kr922LZdBg5GrblQ/exec';
 const BROKER      = 0.024;
-const CHAT_LIMIT  = 10;
+const CHAT_LIMIT  = 20;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt   = n => 'TZS ' + Math.round(n).toLocaleString('en-US');
@@ -787,70 +787,122 @@ function showLogResult(msg, ok) {
 </script>
 
 <!-- FLOATING LOG BUTTON -->
-<button onclick="openLogModal()" style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;line-height:1;" title="Log a trade or plot">＋</button>
+<button onclick="openLogModal()" title="Log a trade or plot" style="position:fixed;bottom:28px;right:28px;z-index:1000;width:54px;height:54px;border-radius:50%;background:var(--teal);color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 18px rgba(26,95,95,0.45);display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.2s,transform 0.15s;">＋</button>
 
 <!-- LOG MODAL -->
-<div id="logModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);">
-  <div style="background:var(--card);border-radius:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;z-index:2001;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;">
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--navy)">Log Entry</div>
-      <button onclick="closeLogModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">✕</button>
+<style>
+  #logModal { display:none;position:fixed;inset:0;z-index:2000;background:rgba(27,42,74,0.6);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px); }
+  .log-card { background:var(--surface);border-radius:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 48px rgba(27,42,74,0.22);border:1px solid var(--border);position:relative;z-index:2001; }
+  .log-card-header { display:flex;align-items:center;justify-content:space-between;padding:22px 24px 0; }
+  .log-card-title { font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--navy);letter-spacing:0.2px; }
+  .log-close-btn { background:var(--bg);border:1px solid var(--border);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--muted);line-height:1; }
+  .log-tabs { display:flex;gap:6px;padding:14px 24px 0;flex-wrap:wrap; }
+  .log-tab { flex:1;padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;color:var(--muted);transition:all 0.15s; }
+  .log-tab:hover { border-color:var(--teal);color:var(--teal); }
+  .log-tab.active { background:var(--teal)!important;color:#fff!important;border-color:var(--teal)!important; }
+  .log-body { padding:16px 24px 24px; }
+  .log-lbl { font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;display:block; }
+  .log-inp { width:100%;padding:10px 13px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--navy);box-sizing:border-box;margin-bottom:10px;font-family:'DM Sans',sans-serif;transition:border-color 0.2s; }
+  .log-inp:focus { outline:none;border-color:var(--teal);background:#fff; }
+  .log-divider { height:1px;background:var(--border);margin:4px 0 14px; }
+  .log-save-btn { width:100%;padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.3px;transition:opacity 0.15s; }
+  .log-save-btn:hover { opacity:0.88; }
+  .log-save-btn:disabled { opacity:0.5;cursor:not-allowed; }
+  .log-warn { font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.5; }
+</style>
+
+<div id="logModal">
+  <div class="log-card">
+    <div class="log-card-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;background:var(--teal-lt);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;">📝</div>
+        <div class="log-card-title">Log Entry</div>
+      </div>
+      <button class="log-close-btn" onclick="closeLogModal()">✕</button>
     </div>
-    <div style="display:flex;gap:6px;padding:14px 24px 0;flex-wrap:wrap;">
-      <button id="logTab_BUY"       class="log-tab" onclick="switchLogTab('BUY')"       style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;color:var(--navy);">📈 Buy</button>
-      <button id="logTab_SELL"      class="log-tab" onclick="switchLogTab('SELL')"      style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;color:var(--navy);">📉 Sell</button>
-      <button id="logTab_LAND_BUY"  class="log-tab" onclick="switchLogTab('LAND_BUY')" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;color:var(--navy);">🏡 Land Buy</button>
-      <button id="logTab_LAND_SELL" class="log-tab" onclick="switchLogTab('LAND_SELL')" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:11px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;color:var(--navy);">🏚 Land Sell</button>
+
+    <div class="log-tabs">
+      <button id="logTab_BUY"       class="log-tab" onclick="switchLogTab('BUY')">📈 Buy</button>
+      <button id="logTab_SELL"      class="log-tab" onclick="switchLogTab('SELL')">📉 Sell</button>
+      <button id="logTab_LAND_BUY"  class="log-tab" onclick="switchLogTab('LAND_BUY')">🏡 Land Buy</button>
+      <button id="logTab_LAND_SELL" class="log-tab" onclick="switchLogTab('LAND_SELL')">🏚 Land Sell</button>
     </div>
-    <style>
-      .log-tab.active{background:var(--navy)!important;color:#fff!important;border-color:var(--navy)!important;}
-      .log-inp{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--navy);box-sizing:border-box;margin-bottom:10px;font-family:inherit;}
-      .log-inp:focus{outline:none;border-color:var(--teal);}
-      .log-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;display:block;}
-      .log-save-btn{width:100%;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;}
-    </style>
-    <div style="padding:16px 24px 24px;">
+
+    <div class="log-body">
+
       <!-- BUY -->
       <div id="logForm_BUY" class="log-form">
-        <label class="log-lbl">Control Number</label><input id="buy_control" class="log-inp" placeholder="e.g. 998550951551">
-        <label class="log-lbl">Ticker *</label><input id="buy_ticker" class="log-inp" placeholder="e.g. CRDB">
-        <label class="log-lbl">Company Name</label><input id="buy_company" class="log-inp" placeholder="e.g. CRDB Bank Plc">
-        <label class="log-lbl">Shares Bought *</label><input id="buy_qty" class="log-inp" type="number" placeholder="e.g. 500">
-        <label class="log-lbl">Buy Price (TZS/share) *</label><input id="buy_price" class="log-inp" type="number" placeholder="e.g. 3020">
-        <button class="log-save-btn" onclick="submitLog('BUY')" style="background:var(--navy);color:#fff;">Save</button>
+        <div class="log-divider"></div>
+        <label class="log-lbl">Control Number</label>
+        <input id="buy_control" class="log-inp" placeholder="e.g. 998550951551">
+        <label class="log-lbl">Ticker *</label>
+        <input id="buy_ticker" class="log-inp" placeholder="e.g. CRDB">
+        <label class="log-lbl">Company Name</label>
+        <input id="buy_company" class="log-inp" placeholder="e.g. CRDB Bank Plc">
+        <label class="log-lbl">Shares Bought *</label>
+        <input id="buy_qty" class="log-inp" type="number" placeholder="e.g. 500">
+        <label class="log-lbl">Buy Price (TZS / share) *</label>
+        <input id="buy_price" class="log-inp" type="number" placeholder="e.g. 3020">
+        <button class="log-save-btn" onclick="submitLog('BUY')" style="background:var(--teal);color:#fff;">Save Buy Trade</button>
       </div>
+
       <!-- SELL -->
       <div id="logForm_SELL" class="log-form" style="display:none">
-        <label class="log-lbl">Ticker *</label><input id="sell_ticker" class="log-inp" placeholder="e.g. CRDB">
-        <label class="log-lbl">Company Name</label><input id="sell_company" class="log-inp" placeholder="e.g. CRDB Bank Plc">
-        <label class="log-lbl">Shares Sold *</label><input id="sell_qty" class="log-inp" type="number" placeholder="e.g. 500">
-        <label class="log-lbl">Sell Price (TZS/share) *</label><input id="sell_price" class="log-inp" type="number" placeholder="e.g. 3200">
-        <button class="log-save-btn" onclick="submitLog('SELL')" style="background:var(--navy);color:#fff;">Save</button>
+        <div class="log-divider"></div>
+        <label class="log-lbl">Ticker *</label>
+        <input id="sell_ticker" class="log-inp" placeholder="e.g. CRDB">
+        <label class="log-lbl">Company Name</label>
+        <input id="sell_company" class="log-inp" placeholder="e.g. CRDB Bank Plc">
+        <label class="log-lbl">Shares Sold *</label>
+        <input id="sell_qty" class="log-inp" type="number" placeholder="e.g. 500">
+        <label class="log-lbl">Sell Price (TZS / share) *</label>
+        <input id="sell_price" class="log-inp" type="number" placeholder="e.g. 3200">
+        <button class="log-save-btn" onclick="submitLog('SELL')" style="background:var(--navy);color:#fff;">Save Sell Trade</button>
       </div>
+
       <!-- LAND BUY -->
       <div id="logForm_LAND_BUY" class="log-form" style="display:none">
-        <label class="log-lbl">Block</label><input id="land_block" class="log-inp" placeholder="e.g. 13F">
-        <label class="log-lbl">Plot No.</label><input id="land_plotno" class="log-inp" placeholder="e.g. 1403">
-        <label class="log-lbl">Region *</label><input id="land_region" class="log-inp" placeholder="e.g. Mbeya">
-        <label class="log-lbl">District</label><input id="land_district" class="log-inp" placeholder="e.g. Mbeya DC">
-        <label class="log-lbl">Street / Area</label><input id="land_street" class="log-inp" placeholder="e.g. Mbalizi-Tanganyika">
-        <label class="log-lbl">Plot Size (sqm)</label><input id="land_area" class="log-inp" type="number" placeholder="e.g. 801">
-        <label class="log-lbl">Date Purchased</label><input id="land_date" class="log-inp" type="date">
+        <div class="log-divider"></div>
+        <label class="log-lbl">Block</label>
+        <input id="land_block" class="log-inp" placeholder="e.g. 13F">
+        <label class="log-lbl">Plot No.</label>
+        <input id="land_plotno" class="log-inp" placeholder="e.g. 1403">
+        <label class="log-lbl">Region *</label>
+        <input id="land_region" class="log-inp" placeholder="e.g. Mbeya">
+        <label class="log-lbl">District</label>
+        <input id="land_district" class="log-inp" placeholder="e.g. Mbeya DC">
+        <label class="log-lbl">Street / Area</label>
+        <input id="land_street" class="log-inp" placeholder="e.g. Mbalizi-Tanganyika">
+        <label class="log-lbl">Plot Size (sqm)</label>
+        <input id="land_area" class="log-inp" type="number" placeholder="e.g. 801">
+        <label class="log-lbl">Date Purchased</label>
+        <input id="land_date" class="log-inp" type="date">
         <label class="log-lbl">Title Deed Status</label>
-        <select id="land_deed" class="log-inp"><option>Pending Title Deed</option><option>Title Deed Obtained</option></select>
-        <label class="log-lbl">Purchase Price (TZS) *</label><input id="land_price" class="log-inp" type="number" placeholder="e.g. 8000000">
-        <label class="log-lbl">Title Deed Proc. Fee (TZS)</label><input id="land_fee" class="log-inp" type="number" placeholder="e.g. 70000">
-        <button class="log-save-btn" onclick="submitLog('LAND_BUY')" style="background:var(--navy);color:#fff;">Save</button>
+        <select id="land_deed" class="log-inp">
+          <option>Pending Title Deed</option>
+          <option>Title Deed Obtained</option>
+        </select>
+        <label class="log-lbl">Purchase Price (TZS) *</label>
+        <input id="land_price" class="log-inp" type="number" placeholder="e.g. 8000000">
+        <label class="log-lbl">Title Deed Proc. Fee (TZS)</label>
+        <input id="land_fee" class="log-inp" type="number" placeholder="e.g. 70000">
+        <button class="log-save-btn" onclick="submitLog('LAND_BUY')" style="background:var(--teal);color:#fff;">Save Land Purchase</button>
       </div>
+
       <!-- LAND SELL -->
       <div id="logForm_LAND_SELL" class="log-form" style="display:none">
-        <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">This will permanently remove the matching plot from your Land &amp; Plots sheet.</p>
-        <label class="log-lbl">Region *</label><input id="lsell_region" class="log-inp" placeholder="e.g. Mbeya">
-        <label class="log-lbl">Street / Area (helps match the right plot)</label><input id="lsell_street" class="log-inp" placeholder="e.g. Mbalizi-Tanganyika">
-        <label class="log-lbl">Plot No. (optional)</label><input id="lsell_plotno" class="log-inp" placeholder="e.g. 1403">
-        <button class="log-save-btn" onclick="submitLog('LAND_SELL')" style="background:#e74c3c;color:#fff;">Remove Plot</button>
+        <div class="log-divider"></div>
+        <div class="log-warn">⚠️ This will permanently remove the matching plot from your Land &amp; Plots sheet. Provide enough detail to identify the correct plot.</div>
+        <label class="log-lbl">Region *</label>
+        <input id="lsell_region" class="log-inp" placeholder="e.g. Mbeya">
+        <label class="log-lbl">Street / Area</label>
+        <input id="lsell_street" class="log-inp" placeholder="e.g. Mbalizi-Tanganyika">
+        <label class="log-lbl">Plot No. (optional)</label>
+        <input id="lsell_plotno" class="log-inp" placeholder="e.g. 1403">
+        <button class="log-save-btn" onclick="submitLog('LAND_SELL')" style="background:#c0392b;color:#fff;">Remove Plot</button>
       </div>
-      <div id="logResult" style="margin-top:14px;font-size:13px;font-weight:600;text-align:center;min-height:20px;"></div>
+
+      <div id="logResult" style="margin-top:14px;font-size:13px;font-weight:600;text-align:center;min-height:20px;font-family:'DM Mono',monospace;"></div>
     </div>
   </div>
 </div>
