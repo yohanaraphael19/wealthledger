@@ -70,8 +70,8 @@
   .hero-bd-val{font-family:'DM Mono',monospace;font-size:15px;color:rgba(255,255,255,0.9);font-weight:500;}
   .hero-bd-pct{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;}
 
-  /* CARDS ROW — 5 cols */
-  .cards-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;}
+  /* CARDS ROW — 4 cols */
+  .cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
   .card{background:var(--surface);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow);border:1px solid var(--border);position:relative;transition:box-shadow 0.2s,transform 0.2s;animation:slideUp 0.4s ease both;}
   .card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);}
   .card-label{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
@@ -211,7 +211,7 @@
   .ai-limit-label{font-size:10px;color:var(--muted);white-space:nowrap;}
 
   /* RESPONSIVE */
-  @media(max-width:1100px){.cards-row{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:1100px){.cards-row{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:900px){.cards-row{grid-template-columns:repeat(2,1fr);}.bottom-cards{grid-template-columns:1fr;}.hero{padding:24px 22px;}}
   @media(max-width:560px){.cards-row{grid-template-columns:1fr;}.container{padding:16px 14px 40px;}.header{padding:14px 16px;}.header-sub{display:none;}}
 </style>
@@ -223,7 +223,7 @@
     <div class="header-logo">WL</div>
     <div>
       <div class="header-title">WealthLedger</div>
-      <div class="header-sub">Stocks · Land · Legacy &nbsp;·&nbsp; All values in TZS</div>
+      <div class="header-sub">Stocks · Land · Legacy</div>
     </div>
   </div>
   <div class="header-right">
@@ -263,16 +263,13 @@
         <div class="card-sub" id="stockValHint">▾ tap for breakdown</div>
         <div class="card-dropdown" id="stockValDrop">
           <div id="stockValRows"></div>
-          <div class="prices-as-of"><span class="price-dot"></span><span id="pricesAsOf">loading…</span></div>
+          <div class="prices-as-of">
+            <span class="price-dot"></span>
+            <span id="totalSharesFooter" style="font-family:'DM Mono',monospace">—</span>
+            <span style="margin:0 4px;opacity:0.4">·</span>
+            <span id="pricesAsOf">loading…</span>
+          </div>
         </div>
-      </div>
-
-      <div class="card" onclick="toggleSharesDrop()" style="cursor:pointer">
-        <div class="card-icon">🪙</div>
-        <div class="card-label">Total Shares Held</div>
-        <div class="card-value" id="cardTotalShares">—</div>
-        <div class="card-sub" id="sharesHint">▾ tap for breakdown</div>
-        <div class="card-dropdown" id="sharesDrop"><div id="sharesRows"></div></div>
       </div>
 
       <div class="card">
@@ -282,11 +279,19 @@
         <div class="card-sub" id="cardPnlSub">vs true cost basis</div>
       </div>
 
-      <div class="card">
+      <div class="card" onclick="toggleLandDrop()" style="cursor:pointer">
         <div class="card-icon">🏞️</div>
         <div class="card-label">Land Portfolio Value</div>
         <div class="card-value" id="cardLandVal">—</div>
-        <div class="card-sub" id="cardLandSub">across all plots</div>
+        <div class="card-sub" id="landValHint">▾ tap for breakdown</div>
+        <div class="card-dropdown" id="landValDrop">
+          <div id="landValRows"></div>
+          <div class="prices-as-of" style="justify-content:flex-start;margin-top:4px;padding-top:6px;border-top:1px solid var(--bg);">
+            <span id="landTotalFooter" style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--navy)">—</span>
+            <span style="margin:0 4px;opacity:0.4">·</span>
+            <span id="landSqmFooter" style="font-size:10px;color:var(--muted)">—</span>
+          </div>
+        </div>
       </div>
 
       <div class="div-card" onclick="toggleDivDrop()" style="cursor:pointer">
@@ -410,7 +415,7 @@ async function fetchSheet(range){
 }
 
 function toggleStockDrop(){const el=document.getElementById('stockValDrop');el.classList.toggle('show');document.getElementById('stockValHint').textContent=el.classList.contains('show')?'▴ collapse':'▾ tap for breakdown';}
-function toggleSharesDrop(){const el=document.getElementById('sharesDrop');el.classList.toggle('show');document.getElementById('sharesHint').textContent=el.classList.contains('show')?'▴ collapse':'▾ tap for breakdown';}
+function toggleLandDrop(){const el=document.getElementById('landValDrop');el.classList.toggle('show');document.getElementById('landValHint').textContent=el.classList.contains('show')?'▴ collapse':'▾ tap for breakdown';}
 function toggleDivDrop(){const el=document.getElementById('divDrop');el.classList.toggle('show');document.getElementById('cardDivSub').textContent=el.classList.contains('show')?'▴ collapse':'▾ tap for breakdown';}
 function toggleHero(){document.getElementById('heroBreakdown').classList.toggle('show');document.getElementById('heroHint').textContent=document.getElementById('heroBreakdown').classList.contains('show')?'▴ collapse':'▾ tap to see breakdown';}
 document.getElementById('heroCard').addEventListener('click',toggleHero);
@@ -548,18 +553,32 @@ async function loadData(){
       </div>`;
     }).join('');
     document.getElementById('pricesAsOf').textContent=latestUpdate?'prices as of '+new Date(latestUpdate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'run daily trigger to update prices';
+    const totalSharesAll=Object.values(netShares).reduce((a,b)=>a+b,0);
+    document.getElementById('totalSharesFooter').textContent=fmtN(totalSharesAll)+' shares total';
 
-    // SHARES CARD
-    document.getElementById('cardTotalShares').textContent=fmtN(Object.values(netShares).reduce((a,b)=>a+b,0));
-    document.getElementById('sharesRows').innerHTML=tickers.map(tk=>`<div class="drop-shares-row"><span class="drop-shares-ticker">${tk}</span><span class="drop-shares-val">${fmtN(netShares[tk])} sh</span></div>`).join('');
+    // SHARES CARD — removed, shares now in stock card footer
 
     // P&L CARD
     const pnlEl=document.getElementById('cardPnl');pnlEl.textContent=fmt(unrealizedPnL);pnlEl.style.color=unrealizedPnL>=0?'var(--green)':'var(--red)';
     document.getElementById('cardPnlSub').innerHTML=`<span class="badge ${unrealizedPnL>=0?'pos':'neg'}">${unrealizedPnL>=0?'↑':'↓'} ${fmtP(pnlPct)}</span>`;
 
-    // LAND CARD
+    // LAND CARD — expandable by region
     document.getElementById('cardLandVal').textContent=fmt(totalLandVal);
-    document.getElementById('cardLandSub').textContent=`${plots.length} plots · ${Math.round(totalSqm).toLocaleString()} sqm`;
+    document.getElementById('landValHint').textContent=`▾ tap for breakdown`;
+    // Build region map for land card dropdown (same regionMap used later for donut)
+    const landRegionMapCard={};
+    plots.forEach(p=>{const reg=p.region||'Unknown';if(!landRegionMapCard[reg])landRegionMapCard[reg]={sqm:0,value:0,plots:0};const sqm=parseFloat(String(p.size).replace(/[^0-9.]/g,''))||0;landRegionMapCard[reg].sqm+=sqm;landRegionMapCard[reg].value+=p.currentVal||p.trueCost;landRegionMapCard[reg].plots+=1;});
+    const landCardColors=['#C9973A','#1A5F5F','#2A7F7F','#1E7E34','#8A5A2A','#3D7A5F'];
+    document.getElementById('landValRows').innerHTML=Object.entries(landRegionMapCard).map(([reg,d],i)=>{
+      const weight=totalLandVal>0?(d.value/totalLandVal*100).toFixed(0):0;
+      const dot=`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${landCardColors[i%landCardColors.length]};flex-shrink:0"></span>`;
+      return`<div class="drop-ticker-row">
+        <div><div class="drop-ticker-name">${dot}${reg} <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:${landCardColors[i%landCardColors.length]}22;color:${landCardColors[i%landCardColors.length]}">${weight}%</span></div><div class="drop-ticker-price">${d.plots} plot${d.plots>1?'s':''} · ${Math.round(d.sqm).toLocaleString()} sqm</div></div>
+        <div class="drop-ticker-right"><div class="drop-val">${fmt(d.value)}</div></div>
+      </div>`;
+    }).join('');
+    document.getElementById('landTotalFooter').textContent=fmt(totalLandVal);
+    document.getElementById('landSqmFooter').textContent=`${plots.length} plots · ${Math.round(totalSqm).toLocaleString()} sqm total`;
 
     // DIVIDEND CARD
     document.getElementById('cardDivIncome').textContent=fmt(totalAnnualDiv);
