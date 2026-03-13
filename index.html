@@ -617,13 +617,40 @@ function openFullReport() {
     modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
     document.body.appendChild(modal);
   }
-  // Render markdown-ish text nicely
-  const rendered = fullInsightText
-    .replace(/###\s*(.+)/g, '<h3 style="font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:var(--navy);margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--border)">$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^\s*[\*\-]\s+/gm, '• ')
-    .replace(/\n/g, '<br>');
-  document.getElementById('modalBody').innerHTML = `<div style="font-size:13px;line-height:1.8;color:var(--navy)">${rendered || '<em>No report yet. Run runAIAnalysis() in Apps Script.</em>'}</div>`;
+  // Clean and render report text
+  const cleaned = fullInsightText
+    // Remove any markdown table lines (lines with |)
+    .split('\n')
+    .filter(line => !line.trim().startsWith('|') && !/^\s*[-|]+\s*$/.test(line))
+    .join('\n')
+    // Remove horizontal rules
+    .replace(/^---+$/gm, '')
+    // Remove leading/trailing blank lines
+    .trim();
+
+  // Split into sections by ### headers
+  const sections = cleaned.split(/###\s+/g).filter(s => s.trim());
+  let html = '';
+  sections.forEach(sec => {
+    const lines    = sec.trim().split('\n');
+    const title    = lines[0].trim().replace(/\*\*/g,'');
+    const body     = lines.slice(1).join('\n').trim();
+    const bodyHtml = body
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // bullet points
+      .replace(/^\s*[\*\-]\s+/gm, '')
+      .split('\n')
+      .filter(l => l.trim())
+      .map(l => `<div style="padding:4px 0 4px 12px;border-left:2px solid var(--border);margin:4px 0;font-size:13px;line-height:1.6">${l.trim()}</div>`)
+      .join('');
+    html += `
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${title}</div>
+        ${bodyHtml}
+      </div>`;
+  });
+
+  document.getElementById('modalBody').innerHTML = html || '<em style="color:var(--muted)">No report yet — run runAIAnalysis() in Apps Script first.</em>';
   document.getElementById('modalDate').textContent = document.getElementById('aiGenerated')?.textContent?.replace('Last analysis: ','') || '';
   modal.style.display = 'flex';
 }
