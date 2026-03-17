@@ -510,6 +510,7 @@ async function fetchSheet(range) {
 }
 
 // ── CHARTS ────────────────────────────────────────────────
+let tsChartInst=null, donutInst=null, gaugeInst=null, allMonths=[];
 let heroWealthDonutInst=null;
 function renderHeroWealthDonut(stockPct, landPct){
   if(heroWealthDonutInst){heroWealthDonutInst.destroy();heroWealthDonutInst=null;}
