@@ -176,9 +176,7 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .hero-val{font-size:clamp(36px,5vw,58px);font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;position:relative;z-index:1;}
 .hero-currency{font-size:.38em;font-weight:500;opacity:.45;vertical-align:top;margin-top:9px;margin-right:1px;letter-spacing:0;}
 .hero-sunburst-zone{display:flex;align-items:center;justify-content:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
-#heroSunburst{flex-shrink:0;overflow:visible;display:block;margin:0 auto;}
-.sb-pill{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--muted);font-family:"Outfit",sans-serif;letter-spacing:.3px;}
-.sb-pill-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+#heroSunburst{flex-shrink:0;overflow:visible;}
 .sunburst-legend{display:flex;flex-direction:column;gap:10px;}
 .sb-section{margin-bottom:6px;}
 .sb-section-title{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
@@ -367,7 +365,7 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
           <div class="hero-val"><span class="hero-currency">TZS</span><span id="heroNum">—</span></div>
         </div>
         <div class="hero-sunburst-zone">
-          <svg id="heroSunburst"></svg>
+          <svg id="heroSunburst" width="260" height="260"></svg>
         </div>
       </div>
 
@@ -505,14 +503,10 @@ function renderSunburst(data) {
   if (!el) return;
   d3.select(el).selectAll('*').remove();
 
+  const W = 260, H = 260;
   const isLight = document.body.classList.contains('light');
   const textColor  = isLight ? '#0A2E28' : '#E8F5F2';
   const mutedColor = isLight ? '#5A7A74' : '#6A9C94';
-
-  // Internal canvas is larger — labels have room on all sides
-  // viewBox centres everything and scales to container
-  const VW = 480, VH = 340;   // internal coordinate space
-  const CX = VW / 2, CY = VH / 2;
 
   const stockShades = ['#00C9A7','#00A688','#007A64','#005A4A','#00E0BF'];
   const landShades  = ['#F5A623','#E8921A','#D47D10','#C06808','#FFB84D'];
@@ -520,11 +514,14 @@ function renderSunburst(data) {
   const totalVal = data.stockVal + data.landVal;
   if (totalVal <= 0) return;
 
-  // Rotation: Land (gold) centred at π/2 = right (3 o'clock)
+  // ── ROTATION: Land (gold) centred on the RIGHT (3 o'clock = π/2) ──
   const stockFrac = data.stockVal / totalVal;
   const landFrac  = data.landVal  / totalVal;
-  const landMid   = (stockFrac + landFrac / 2) * 2 * Math.PI;
-  const ROTATION  = Math.PI / 2 - landMid;
+  // Land occupies angles [stockFrac*2π .. 2π] in D3 partition space.
+  // Its midpoint in partition space = (stockFrac + landFrac/2) * 2π
+  // We want that midpoint at π/2 (right side), so:
+  const landMid  = (stockFrac + landFrac / 2) * 2 * Math.PI;
+  const ROTATION = Math.PI / 2 - landMid;
 
   const hierarchy = {
     name: 'root',
@@ -540,32 +537,28 @@ function renderSunburst(data) {
     .sum(d => d.children ? 0 : d.value)
     .sort((a,b) => b.value - a.value);
 
-  // Ring radii — generous, labels live outside Ro2
-  const Ri1=34, Ro1=58, Ri2=63, Ro2=98;
+  const Ri1=26, Ro1=45, Ri2=49, Ro2=76;
 
   const partition = d3.partition().size([2*Math.PI, 1]);
   partition(root);
 
+  // All arcs use the SAME rotation offset
   const makeArc = (ir, or, pad) => d3.arc()
     .startAngle(d => d.x0 + ROTATION)
     .endAngle(d => d.x1 + ROTATION)
-    .padAngle(pad).padRadius(70)
+    .padAngle(pad).padRadius(55)
     .innerRadius(ir).outerRadius(or)
     .cornerRadius(2);
 
   const arcIn      = makeArc(Ri1, Ro1, 0.03);
   const arcOut     = makeArc(Ri2, Ro2, 0.02);
-  // Edge arc — centroid gives exact point on outer ring edge per slice
-  const arcEdge    = makeArc(Ro2, Ro2, 0.02);
+  // Centroid arc at outer edge of outer ring — this is where the line starts
+  const arcOutEdge = makeArc(Ro2, Ro2, 0.02);
 
-  // Set viewBox so the SVG scales cleanly, display size = hero width minus padding
-  el.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
-  el.setAttribute('width',  '100%');
-  el.setAttribute('height', '340');
-  el.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-
+  el.setAttribute('width', W);
+  el.setAttribute('height', H);
   const svg = d3.select(el);
-  const g = svg.append('g').attr('transform', `translate(${CX},${CY})`);
+  const g = svg.append('g').attr('transform', `translate(${W/2},${H/2})`);
 
   // Inner ring
   const innerNodes = root.children || [];
@@ -574,7 +567,7 @@ function renderSunburst(data) {
     .attr('fill', d=>d.data.color).attr('opacity', 0.95)
     .append('title').text(d=>`${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Inner ring: small % label, no name text
+  // Percentage inside inner ring (small, no overflow)
   const arcInMid = makeArc((Ri1+Ro1)/2,(Ri1+Ro1)/2,0);
   innerNodes.forEach(node => {
     if (node.value/totalVal < 0.08) return;
@@ -583,8 +576,8 @@ function renderSunburst(data) {
       .attr('x',lx).attr('y',ly)
       .attr('text-anchor','middle').attr('dominant-baseline','middle')
       .attr('font-family','JetBrains Mono, monospace')
-      .attr('font-size','9px').attr('font-weight','700')
-      .attr('fill','rgba(0,0,0,0.5)').attr('pointer-events','none')
+      .attr('font-size','7px').attr('font-weight','700')
+      .attr('fill','rgba(0,0,0,0.55)').attr('pointer-events','none')
       .text(((node.value/totalVal)*100).toFixed(0)+'%');
   });
 
@@ -596,68 +589,77 @@ function renderSunburst(data) {
     .append('title').text(d=>`${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
   // ── CALLOUT LABELS ────────────────────────────────────────
-  const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.020);
+  // Only slices >= 2.5% get a label
+  const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.025);
 
+  // Build label objects with positions DERIVED from the actual arc geometry
   const labels = labelNodes.map(d => {
+    const midAngle = (d.x0 + d.x1) / 2 + ROTATION;
     const pct = ((d.value/totalVal)*100).toFixed(1);
 
-    // True edge centroid from arc geometry — always correct regardless of rotation
-    const [ex, ey] = arcEdge.centroid(d);
+    // Start point: actual centroid of the outer edge of the slice
+    // arcOutEdge has innerRadius=outerRadius=Ro2, so centroid IS on the ring edge
+    const [ex, ey] = arcOutEdge.centroid(d);
+
+    // Direction unit vector from centre through slice midpoint
     const len = Math.sqrt(ex*ex + ey*ey) || 1;
     const ux = ex/len, uy = ey/len;
 
-    // Elbow: radial arm out, then horizontal tick
-    const RADIAL = 22, HORIZ = 18;
-    const bx = ex + ux * RADIAL, by = ey + uy * RADIAL;
+    // Elbow: go outward by a fixed amount, then horizontal
+    const RADIAL = 18;
+    const HORIZ  = 14;
+    const bx = ex + ux * RADIAL;   // elbow bend x
+    const by = ey + uy * RADIAL;   // elbow bend y
     const onRight = bx >= 0;
-    const tx = bx + (onRight ? HORIZ : -HORIZ), ty = by;
+    const tx = bx + (onRight ? HORIZ : -HORIZ);  // text start x
+    const ty = by;
 
-    // Name
+    // Name shortening
     let name = d.data.name;
     const hasETF = name.includes('-ETF');
     if (hasETF) name = name.replace('-ETF','');
-    if (name.length > 9) name = name.slice(0,8)+'…';
+    if (name.length > 8) name = name.slice(0,7)+'…';
     if (hasETF) name += '-ETF';
+    const label = name + ' - ' + pct + '%';
 
-    return { d, ex, ey, bx, by, tx, ty, onRight,
-             label: name + ' - ' + pct + '%',
-             color: d.data.color,
-             angle: (d.x0 + d.x1) / 2 + ROTATION };
+    return { d, ex, ey, bx, by, tx, ty, onRight, label, color: d.data.color, angle: midAngle };
   });
 
-  // Collision avoidance: sort by angle, nudge same-side labels apart
+  // ── COLLISION AVOIDANCE ───────────────────────────────────
+  // Sort by angle, then nudge overlapping labels apart vertically
   labels.sort((a,b) => a.angle - b.angle);
-  const MIN_GAP = 14;
-  // Forward pass
+  const MIN_GAP = 12; // px minimum vertical gap between labels
   for (let i=1; i<labels.length; i++) {
-    const p = labels[i-1], c = labels[i];
-    if (c.onRight === p.onRight && Math.abs(c.ty - p.ty) < MIN_GAP)
-      c.ty = p.ty + (c.ty >= p.ty ? MIN_GAP : -MIN_GAP);
-  }
-  // Backward pass
-  for (let i=labels.length-2; i>=0; i--) {
-    const p = labels[i], c = labels[i+1];
-    if (c.onRight === p.onRight && Math.abs(c.ty - p.ty) < MIN_GAP)
-      p.ty = c.ty - (c.ty >= p.ty ? MIN_GAP : -MIN_GAP);
+    const prev = labels[i-1], curr = labels[i];
+    if (Math.abs(curr.ty - prev.ty) < MIN_GAP && curr.onRight === prev.onRight) {
+      curr.ty = prev.ty + MIN_GAP;
+      curr.by = curr.ty;
+    }
   }
 
+  // Draw callouts
   labels.forEach(lb => {
+    // Elbow polyline: slice-edge → bend → horizontal end
     g.append('polyline')
       .attr('points', `${lb.ex},${lb.ey} ${lb.bx},${lb.by} ${lb.tx},${lb.ty}`)
       .attr('fill','none')
-      .attr('stroke', lb.color).attr('stroke-width', 0.9).attr('opacity', 0.7);
+      .attr('stroke', lb.color)
+      .attr('stroke-width', 0.8)
+      .attr('opacity', 0.7);
 
+    // Dot at slice contact
     g.append('circle')
       .attr('cx', lb.ex).attr('cy', lb.ey)
-      .attr('r', 2).attr('fill', lb.color);
+      .attr('r', 1.8).attr('fill', lb.color);
 
+    // Label
     g.append('text')
-      .attr('x', lb.tx + (lb.onRight ? 4 : -4))
+      .attr('x', lb.tx + (lb.onRight ? 3 : -3))
       .attr('y', lb.ty)
       .attr('text-anchor', lb.onRight ? 'start' : 'end')
       .attr('dominant-baseline','middle')
       .attr('font-family','Outfit, sans-serif')
-      .attr('font-size','9px').attr('font-weight','600')
+      .attr('font-size','7.5px').attr('font-weight','600')
       .attr('fill', textColor)
       .text(lb.label);
   });
@@ -666,7 +668,7 @@ function renderSunburst(data) {
   g.append('text')
     .attr('text-anchor','middle').attr('dy','0.15em')
     .attr('font-family','JetBrains Mono, monospace')
-    .attr('font-size','9px').attr('font-weight','700')
+    .attr('font-size','8px').attr('font-weight','700')
     .attr('fill', mutedColor).attr('letter-spacing','0.5px')
     .text('NET WORTH');
 }
@@ -680,7 +682,7 @@ function toggleTheme(){
 (function(){
   try{const t=localStorage.getItem('wl_theme');if(t==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='🌙';}}catch(e){}
 })();
-const DC = ['#00C9A7','#00A688','#007A64','#005A4A','#00E0BF','#3D9EFF','#FFD166']; // teal shades match sunburst stock colors
+const DC = ['#00C9A7','#F5A623','#00BF63','#3D9EFF','#C97BF5','#FF6B6B','#FFD166'];
 
 function renderGauge(pct) {
   if(gaugeInst){gaugeInst.destroy();gaugeInst=null;}
@@ -896,13 +898,11 @@ async function loadData() {
     document.getElementById('rcProceeds').textContent=fmt(totalProceeds);
 
     // Donut + ticker list
-    // Sort tickers by value desc so color slots are consistent (largest = slot 0 = teal)
-    const sortedTickers = [...tickers].sort((a,b)=>(stockVals[b]||0)-(stockVals[a]||0));
-    renderDonut(sortedTickers.map(tk=>Math.round(stockVals[tk])), sortedTickers);
+    renderDonut(tickers.map(tk=>Math.round(stockVals[tk])), tickers);
     // Shorten long ticker display names
     const displayName = tk => tk.length > 9 ? tk.replace('-ETF','') + '<span style="font-size:7px;opacity:.6">-ETF</span>' : tk;
 
-    document.getElementById('tickerList').innerHTML = sortedTickers.map((tk,i)=>{
+    document.getElementById('tickerList').innerHTML = tickers.map((tk,i)=>{
       const val=stockVals[tk], cost=costByTk[tk]||0, pnl=val-cost, pct=cost>0?pnl/cost:0;
       const w=totalStockVal>0?(val/totalStockVal*100).toFixed(0):0;
       const chg=dailyChg[tk];
@@ -1010,15 +1010,6 @@ async function sendAIChat(){
 }
 
 loadData();
-
-// Re-render sunburst on resize (responsive scaling)
-let _resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => {
-    if (window._lastSunburstData) renderSunburst(window._lastSunburstData);
-  }, 200);
-});
 
 // ── LOG MODAL ─────────────────────────────────────────────
 function openLog(){document.getElementById('logModal').style.display='flex';document.body.style.overflow='hidden';switchTab('BUY');}
