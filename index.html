@@ -170,13 +170,13 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .hero{background:var(--s1);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:0;}
 .hero::after{content:'';position:absolute;top:-100px;right:-100px;width:320px;height:320px;background:radial-gradient(circle,rgba(0,201,167,.06) 0%,transparent 65%);pointer-events:none;}
 .hero::before{content:'';position:absolute;bottom:-80px;left:20%;width:240px;height:240px;background:radial-gradient(circle,rgba(245,166,35,.04) 0%,transparent 65%);pointer-events:none;}
-.hero-lbl{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.hero-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.hero-lbl{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);}
+.hero-age{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 .hero-val{font-size:clamp(36px,5vw,58px);font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;position:relative;z-index:1;}
 .hero-currency{font-size:.38em;font-weight:500;opacity:.45;vertical-align:top;margin-top:9px;margin-right:1px;letter-spacing:0;}
-.hero-age{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:10px;}
-/* ── D3 SUNBURST in hero ─────────────────────────────────── */
-.hero-sunburst-zone{display:flex;align-items:center;justify-content:center;gap:24px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
-#heroSunburst{flex-shrink:0;}
+.hero-sunburst-zone{display:flex;align-items:center;justify-content:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+#heroSunburst{flex-shrink:0;overflow:visible;}
 .sunburst-legend{display:flex;flex-direction:column;gap:10px;}
 .sb-section{margin-bottom:6px;}
 .sb-section-title{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
@@ -358,13 +358,14 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
       <!-- CENTER HERO -->
       <div class="hero">
         <div>
-          <div class="hero-lbl">Total Net Worth</div>
+          <div class="hero-lbl-row">
+            <span class="hero-lbl">Total Net Worth</span>
+            <span class="hero-age" id="heroAge"></span>
+          </div>
           <div class="hero-val"><span class="hero-currency">TZS</span><span id="heroNum">—</span></div>
-          <div class="hero-age" id="heroAge"></div>
         </div>
         <div class="hero-sunburst-zone">
-          <svg id="heroSunburst" width="190" height="190"></svg>
-          <div class="sunburst-legend" id="sunburstLegend"></div>
+          <svg id="heroSunburst" width="260" height="260"></svg>
         </div>
       </div>
 
@@ -498,45 +499,53 @@ async function fetchSheet(range) {
 let tsChartInst=null, donutInst=null, gaugeInst=null, allMonths=[];
 // ── D3 SUNBURST ───────────────────────────────────────────
 // Inner ring: Stocks vs Land (% of net worth)
-// Outer ring: per-ticker within Stocks, per-region within Land
+// ── D3 SUNBURST ────────────────────────────────────────────
+// Inner ring: Stocks (left/teal) · Land (right/gold)
+// Outer ring: per-ticker labels left, per-region labels right
+// Rotation: Land starts at top-right (π/2 offset so gold is on right)
 function renderSunburst(data) {
-  // data = { stockVal, landVal, tickers:[{name,val}], regions:[{name,val}] }
   const el = document.getElementById('heroSunburst');
   if (!el) return;
   d3.select(el).selectAll('*').remove();
 
-  const W = 190, H = 190, R = Math.min(W,H)/2 - 4;
+  const W = 260, H = 260;
+  // Extra margin for outer labels
+  const LABEL_MARGIN = 48;
+  const R = (Math.min(W,H)/2) - LABEL_MARGIN;
   const isLight = document.body.classList.contains('light');
-  const bgColor = isLight ? '#FFFFFF' : '#073D36';
   const textColor = isLight ? '#0A2E28' : '#E8F5F2';
+  const mutedColor = isLight ? '#5A7A74' : '#6A9C94';
 
-  // Color palettes
-  // Inner: Stocks=teal, Land=gold
-  // Outer stocks: shades of teal
-  // Outer land: shades of gold/amber
   const stockShades = ['#00C9A7','#00A688','#007A64','#005A4A','#00E0BF'];
   const landShades  = ['#F5A623','#E8921A','#D47D10','#C06808','#FFB84D'];
 
   const totalVal = data.stockVal + data.landVal;
   if (totalVal <= 0) return;
 
-  // Build hierarchical data for D3
+  // Hierarchy: Land first so it appears on the right (partition goes clockwise)
+  // We rotate the whole chart by -π/2 so 0 is at top, then offset
+  // To put Land on the right: arrange as [Stocks, Land] and rotate start by
+  // -π/2 + (landFraction * π) so Land sits symmetrically on the right
+  const stockFrac = data.stockVal / totalVal;
+  const landFrac  = data.landVal  / totalVal;
+  // Rotation: put the boundary between Stocks and Land at the top (12 o'clock)
+  // then land spans rightward. Rotate so Stocks spans left half, Land right half
+  // offset = -π/2 puts start at top. We want Land on right so no extra offset needed
+  // since Stocks (larger) will naturally fill the left and Land the right.
+  const ROTATION = -Math.PI / 2; // start at top (12 o'clock), go clockwise
+
   const hierarchy = {
     name: 'root',
     children: [
       {
-        name: 'Stocks',
-        value: data.stockVal,
-        color: '#00C9A7',
+        name: 'Stocks', value: data.stockVal, color: '#00C9A7',
         children: data.tickers.map((t,i) => ({
           name: t.name, value: t.val,
           color: stockShades[i % stockShades.length]
         }))
       },
       {
-        name: 'Land',
-        value: data.landVal,
-        color: '#F5A623',
+        name: 'Land', value: data.landVal, color: '#F5A623',
         children: data.regions.map((r,i) => ({
           name: r.name, value: r.val,
           color: landShades[i % landShades.length]
@@ -549,108 +558,140 @@ function renderSunburst(data) {
     .sum(d => d.children ? 0 : d.value)
     .sort((a,b) => b.value - a.value);
 
-  // Inner radius for ring 1, outer for ring 2
-  const innerR1 = R * 0.36;  // inner edge of stocks/land ring
-  const outerR1 = R * 0.60;  // outer edge of stocks/land ring (inner edge of ticker/region ring)
-  const outerR2 = R * 0.98;  // outer edge of ticker/region ring
+  const innerR1 = R * 0.38;
+  const outerR1 = R * 0.64;
+  const outerR2 = R * 0.98;
 
+  // Partition maps x0/x1 to [0, 2π]
   const partition = d3.partition().size([2 * Math.PI, 1]);
   partition(root);
 
-  // Arc generators
+  // Arc generators — apply rotation offset via startAngle/endAngle
   const arcInner = d3.arc()
-    .startAngle(d => d.x0)
-    .endAngle(d => d.x1)
-    .padAngle(0.025)
-    .padRadius(R * 0.5)
-    .innerRadius(innerR1)
-    .outerRadius(outerR1)
+    .startAngle(d => d.x0 + ROTATION)
+    .endAngle(d => d.x1 + ROTATION)
+    .padAngle(0.022).padRadius(R * 0.5)
+    .innerRadius(innerR1).outerRadius(outerR1)
     .cornerRadius(3);
 
   const arcOuter = d3.arc()
-    .startAngle(d => d.x0)
-    .endAngle(d => d.x1)
-    .padAngle(0.018)
-    .padRadius(R * 0.5)
-    .innerRadius(outerR1 + 4)
-    .outerRadius(outerR2)
+    .startAngle(d => d.x0 + ROTATION)
+    .endAngle(d => d.x1 + ROTATION)
+    .padAngle(0.016).padRadius(R * 0.5)
+    .innerRadius(outerR1 + 4).outerRadius(outerR2)
     .cornerRadius(3);
 
-  const svg = d3.select(el)
-    .attr('width', W).attr('height', H);
+  // Label arc — midpoint of outer ring for text placement
+  const arcLabel = d3.arc()
+    .startAngle(d => d.x0 + ROTATION)
+    .endAngle(d => d.x1 + ROTATION)
+    .innerRadius(outerR2 + 8)
+    .outerRadius(outerR2 + 8);
 
+  el.setAttribute('width', W);
+  el.setAttribute('height', H);
+
+  const svg = d3.select(el);
   const g = svg.append('g')
     .attr('transform', `translate(${W/2},${H/2})`);
 
-  // Draw inner ring (Stocks / Land)
+  // ── INNER RING ──────────────────────────────────────────
   const innerNodes = root.children || [];
   g.selectAll('.arc-inner')
     .data(innerNodes)
     .enter().append('path')
-    .attr('class','arc-inner')
     .attr('d', arcInner)
     .attr('fill', d => d.data.color)
-    .attr('opacity', 0.92)
-    .style('cursor','default')
+    .attr('opacity', 0.95)
     .append('title')
     .text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Draw outer ring (tickers / regions)
+  // Inner ring labels (Stocks / Land) — inside the ring
+  const arcInnerMid = d3.arc()
+    .startAngle(d => d.x0 + ROTATION)
+    .endAngle(d => d.x1 + ROTATION)
+    .innerRadius((innerR1 + outerR1) / 2)
+    .outerRadius((innerR1 + outerR1) / 2);
+
+  g.selectAll('.lbl-inner')
+    .data(innerNodes)
+    .enter().append('text')
+    .attr('transform', d => `translate(${arcInnerMid.centroid(d)})`)
+    .attr('text-anchor','middle')
+    .attr('dominant-baseline','middle')
+    .attr('font-family','Outfit, sans-serif')
+    .attr('font-size','8px')
+    .attr('font-weight','700')
+    .attr('fill','#000')
+    .attr('opacity', 0.7)
+    .text(d => d.data.name.toUpperCase());
+
+  // ── OUTER RING ──────────────────────────────────────────
   const outerNodes = innerNodes.flatMap(d => d.children || []);
   g.selectAll('.arc-outer')
     .data(outerNodes)
     .enter().append('path')
-    .attr('class','arc-outer')
     .attr('d', arcOuter)
     .attr('fill', d => d.data.color)
-    .attr('opacity', 0.85)
-    .style('cursor','default')
+    .attr('opacity', 0.82)
     .append('title')
     .text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Center label: total net worth %
+  // ── OUTER LABELS ─────────────────────────────────────────
+  // Only label slices large enough to read (>2% of total)
+  const labelNodes = outerNodes.filter(d => (d.value / totalVal) >= 0.02);
+
+  labelNodes.forEach(d => {
+    const pct = ((d.value / totalVal) * 100).toFixed(1);
+    const midAngle = (d.x0 + d.x1) / 2 + ROTATION;
+    const onRight = Math.cos(midAngle) >= 0;
+
+    // Line from outer ring edge to label
+    const innerPt = arcOuter.centroid(d);
+    const labelR  = outerR2 + 14;
+    const outerPt = [Math.cos(midAngle) * labelR, Math.sin(midAngle) * labelR];
+    const textX   = Math.cos(midAngle) * (outerR2 + 20);
+    const textY   = Math.sin(midAngle) * (outerR2 + 20);
+
+    // Connector line
+    g.append('line')
+      .attr('x1', innerPt[0]).attr('y1', innerPt[1])
+      .attr('x2', outerPt[0]).attr('y2', outerPt[1])
+      .attr('stroke', d.data.color)
+      .attr('stroke-width', 1)
+      .attr('opacity', 0.5);
+
+    // Short name: truncate if needed
+    const maxLen = 8;
+    const name = d.data.name.length > maxLen
+      ? d.data.name.slice(0, maxLen - 1) + '…'
+      : d.data.name;
+
+    // Two-line label: name on first line, pct on second
+    const lbl = g.append('text')
+      .attr('x', textX).attr('y', textY)
+      .attr('text-anchor', onRight ? 'start' : 'end')
+      .attr('font-family','JetBrains Mono, monospace')
+      .attr('fill', d.data.color);
+
+    lbl.append('tspan')
+      .attr('x', textX).attr('dy','-0.5em')
+      .attr('font-size','8px').attr('font-weight','600')
+      .text(name);
+
+    lbl.append('tspan')
+      .attr('x', textX).attr('dy','1.1em')
+      .attr('font-size','8px').attr('font-weight','700')
+      .text(pct + '%');
+  });
+
+  // ── CENTER TEXT ─────────────────────────────────────────
   g.append('text')
-    .attr('text-anchor','middle').attr('dy','0.1em')
+    .attr('text-anchor','middle').attr('dy','0.15em')
     .attr('font-family','JetBrains Mono, monospace')
-    .attr('font-size','11px').attr('font-weight','700')
+    .attr('font-size','10px').attr('font-weight','700')
     .attr('fill', textColor)
     .text('NET WORTH');
-
-  // Build legend
-  const legend = document.getElementById('sunburstLegend');
-  if (!legend) return;
-  legend.innerHTML = '';
-
-  innerNodes.forEach(node => {
-    const pct = ((node.value / totalVal) * 100).toFixed(1);
-    const secDiv = document.createElement('div');
-    secDiv.className = 'sb-section';
-
-    const titleRow = document.createElement('div');
-    titleRow.className = 'sb-item';
-    titleRow.innerHTML = `
-      <div class="sb-dot" style="background:${node.data.color}"></div>
-      <span class="sb-name" style="font-weight:700;color:var(--text);font-size:10px">${node.data.name}</span>
-      <span class="sb-pct">${pct}%</span>`;
-    secDiv.appendChild(titleRow);
-
-    (node.children || []).forEach(child => {
-      const cpct = ((child.value / totalVal) * 100).toFixed(1);
-      // Truncate long names
-      const displayName = child.data.name.length > 10
-        ? child.data.name.slice(0,8)+'…'
-        : child.data.name;
-      const row = document.createElement('div');
-      row.className = 'sb-item';
-      row.style.paddingLeft = '14px';
-      row.innerHTML = `
-        <div class="sb-dot" style="background:${child.data.color};width:6px;height:6px"></div>
-        <span class="sb-name">${displayName}</span>
-        <span class="sb-pct" style="font-size:9px">${cpct}%</span>`;
-      secDiv.appendChild(row);
-    });
-    legend.appendChild(secDiv);
-  });
 }
 
 // ── THEME TOGGLE ───────────────────────────────────────────
@@ -658,10 +699,8 @@ function toggleTheme(){
   const isLight=document.body.classList.toggle('light');
   document.getElementById('themeBtn').textContent=isLight?'🌙':'☀️';
   try{localStorage.setItem('wl_theme',isLight?'light':'dark');}catch(e){}
-  // Re-render D3 sunburst with new theme colors
   if(window._lastSunburstData) renderSunburst(window._lastSunburstData);
 }
-// Restore theme on load
 (function(){
   try{const t=localStorage.getItem('wl_theme');if(t==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='🌙';}}catch(e){}
 })();
