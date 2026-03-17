@@ -80,8 +80,8 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .ref-btn{background:transparent;border:none;color:var(--muted);padding:6px;border-radius:7px;font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;width:30px;height:30px;}
 .ref-btn:hover{color:var(--teal);transform:rotate(180deg);}
 /* Theme toggle */
-.theme-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .2s;flex-shrink:0;}
-.theme-btn:hover{border-color:var(--teal);color:var(--teal);}
+.theme-btn{background:transparent;border:none;color:var(--muted);padding:6px;border-radius:7px;font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;width:30px;height:30px;}
+.theme-btn:hover{color:var(--teal);}
 
 /* ── PAGE SHELL ──────────────────────────────────────────── */
 .page{max-width:1440px;margin:0 auto;padding:20px 20px 60px;position:relative;z-index:1;}
@@ -514,31 +514,22 @@ function renderSunburst(data) {
   const totalVal = data.stockVal + data.landVal;
   if (totalVal <= 0) return;
 
-  // Rotation math: make Land (gold) appear on the RIGHT side
-  // D3 partition: angles go 0..2π clockwise. Stocks is first child (~81%), Land second (~19%).
-  // We want Land centred at π/2 (right = 3 o'clock).
-  // Land occupies angles [stockFrac*2π .. 2π]. Its centre = (stockFrac + landFrac/2) * 2π.
-  // ROTATION shifts that centre to π/2.
+  // ── ROTATION: Land (gold) centred on the RIGHT (3 o'clock = π/2) ──
   const stockFrac = data.stockVal / totalVal;
   const landFrac  = data.landVal  / totalVal;
-  const landCentre = (stockFrac + landFrac / 2) * 2 * Math.PI;
-  const ROTATION   = Math.PI / 2 - landCentre;
+  // Land occupies angles [stockFrac*2π .. 2π] in D3 partition space.
+  // Its midpoint in partition space = (stockFrac + landFrac/2) * 2π
+  // We want that midpoint at π/2 (right side), so:
+  const landMid  = (stockFrac + landFrac / 2) * 2 * Math.PI;
+  const ROTATION = Math.PI / 2 - landMid;
 
   const hierarchy = {
     name: 'root',
     children: [
-      {
-        name: 'Stocks', value: data.stockVal, color: '#00C9A7',
-        children: data.tickers.map((t,i) => ({
-          name: t.name, value: t.val, color: stockShades[i % stockShades.length]
-        }))
-      },
-      {
-        name: 'Land', value: data.landVal, color: '#F5A623',
-        children: data.regions.map((r,i) => ({
-          name: r.name, value: r.val, color: landShades[i % landShades.length]
-        }))
-      }
+      { name:'Stocks', value:data.stockVal, color:'#00C9A7',
+        children: data.tickers.map((t,i)=>({ name:t.name, value:t.val, color:stockShades[i%stockShades.length] })) },
+      { name:'Land',   value:data.landVal,  color:'#F5A623',
+        children: data.regions.map((r,i)=>({ name:r.name, value:r.val, color:landShades[i%landShades.length] })) }
     ]
   };
 
@@ -546,12 +537,12 @@ function renderSunburst(data) {
     .sum(d => d.children ? 0 : d.value)
     .sort((a,b) => b.value - a.value);
 
-  // Radii — compact to leave room for callout labels
-  const Ri1 = 26, Ro1 = 45, Ri2 = 49, Ro2 = 76;
+  const Ri1=26, Ro1=45, Ri2=49, Ro2=76;
 
-  const partition = d3.partition().size([2 * Math.PI, 1]);
+  const partition = d3.partition().size([2*Math.PI, 1]);
   partition(root);
 
+  // All arcs use the SAME rotation offset
   const makeArc = (ir, or, pad) => d3.arc()
     .startAngle(d => d.x0 + ROTATION)
     .endAngle(d => d.x1 + ROTATION)
@@ -559,8 +550,10 @@ function renderSunburst(data) {
     .innerRadius(ir).outerRadius(or)
     .cornerRadius(2);
 
-  const arcIn  = makeArc(Ri1, Ro1, 0.03);
-  const arcOut = makeArc(Ri2, Ro2, 0.02);
+  const arcIn      = makeArc(Ri1, Ro1, 0.03);
+  const arcOut     = makeArc(Ri2, Ro2, 0.02);
+  // Centroid arc at outer edge of outer ring — this is where the line starts
+  const arcOutEdge = makeArc(Ro2, Ro2, 0.02);
 
   el.setAttribute('width', W);
   el.setAttribute('height', H);
@@ -571,79 +564,104 @@ function renderSunburst(data) {
   const innerNodes = root.children || [];
   g.selectAll('.ai').data(innerNodes).enter()
     .append('path').attr('d', arcIn)
-    .attr('fill', d => d.data.color).attr('opacity', 0.95)
-    .append('title').text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
+    .attr('fill', d=>d.data.color).attr('opacity', 0.95)
+    .append('title').text(d=>`${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Percentage labels inside inner ring (no "STOCKS"/"LAND" text)
-  const arcInMid = makeArc((Ri1+Ro1)/2, (Ri1+Ro1)/2, 0);
+  // Percentage inside inner ring (small, no overflow)
+  const arcInMid = makeArc((Ri1+Ro1)/2,(Ri1+Ro1)/2,0);
   innerNodes.forEach(node => {
-    const pct = ((node.value/totalVal)*100).toFixed(0)+'%';
-    const [lx, ly] = arcInMid.centroid(node);
-    if (node.value/totalVal >= 0.08) {
-      g.append('text')
-        .attr('x', lx).attr('y', ly)
-        .attr('text-anchor','middle').attr('dominant-baseline','middle')
-        .attr('font-family','JetBrains Mono, monospace')
-        .attr('font-size','7px').attr('font-weight','700')
-        .attr('fill','rgba(0,0,0,0.55)').attr('pointer-events','none')
-        .text(pct);
-    }
+    if (node.value/totalVal < 0.08) return;
+    const [lx,ly] = arcInMid.centroid(node);
+    g.append('text')
+      .attr('x',lx).attr('y',ly)
+      .attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('font-family','JetBrains Mono, monospace')
+      .attr('font-size','7px').attr('font-weight','700')
+      .attr('fill','rgba(0,0,0,0.55)').attr('pointer-events','none')
+      .text(((node.value/totalVal)*100).toFixed(0)+'%');
   });
 
   // Outer ring
-  const outerNodes = innerNodes.flatMap(d => d.children || []);
+  const outerNodes = innerNodes.flatMap(d=>d.children||[]);
   g.selectAll('.ao').data(outerNodes).enter()
     .append('path').attr('d', arcOut)
-    .attr('fill', d => d.data.color).attr('opacity', 0.85)
-    .append('title').text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
+    .attr('fill', d=>d.data.color).attr('opacity', 0.85)
+    .append('title').text(d=>`${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Callout labels — professional elbow connector style (like reference image)
+  // ── CALLOUT LABELS ────────────────────────────────────────
+  // Only slices >= 2.5% get a label
   const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.025);
 
-  labelNodes.forEach(d => {
+  // Build label objects with positions DERIVED from the actual arc geometry
+  const labels = labelNodes.map(d => {
     const midAngle = (d.x0 + d.x1) / 2 + ROTATION;
     const pct = ((d.value/totalVal)*100).toFixed(1);
 
-    // Shorten names: strip -ETF suffix for display, truncate long names
+    // Start point: actual centroid of the outer edge of the slice
+    // arcOutEdge has innerRadius=outerRadius=Ro2, so centroid IS on the ring edge
+    const [ex, ey] = arcOutEdge.centroid(d);
+
+    // Direction unit vector from centre through slice midpoint
+    const len = Math.sqrt(ex*ex + ey*ey) || 1;
+    const ux = ex/len, uy = ey/len;
+
+    // Elbow: go outward by a fixed amount, then horizontal
+    const RADIAL = 18;
+    const HORIZ  = 14;
+    const bx = ex + ux * RADIAL;   // elbow bend x
+    const by = ey + uy * RADIAL;   // elbow bend y
+    const onRight = bx >= 0;
+    const tx = bx + (onRight ? HORIZ : -HORIZ);  // text start x
+    const ty = by;
+
+    // Name shortening
     let name = d.data.name;
     const hasETF = name.includes('-ETF');
     if (hasETF) name = name.replace('-ETF','');
-    if (name.length > 9) name = name.slice(0,8)+'…';
-    if (hasETF) name = name + '-ETF';
-    const labelStr = name + ' - ' + pct + '%';
+    if (name.length > 8) name = name.slice(0,7)+'…';
+    if (hasETF) name += '-ETF';
+    const label = name + ' - ' + pct + '%';
 
-    // Elbow line: radial segment → horizontal tick
-    const R1 = Ro2 + 8;   // start point (just outside outer ring)
-    const R2 = Ro2 + 20;  // elbow bend
-    const onRight = Math.cos(midAngle) >= 0;
-    const HORIZ = 12;     // length of horizontal tick
+    return { d, ex, ey, bx, by, tx, ty, onRight, label, color: d.data.color, angle: midAngle };
+  });
 
-    const x1 = Math.cos(midAngle) * R1, y1 = Math.sin(midAngle) * R1;
-    const x2 = Math.cos(midAngle) * R2, y2 = Math.sin(midAngle) * R2;
-    const x3 = x2 + (onRight ? HORIZ : -HORIZ), y3 = y2;
+  // ── COLLISION AVOIDANCE ───────────────────────────────────
+  // Sort by angle, then nudge overlapping labels apart vertically
+  labels.sort((a,b) => a.angle - b.angle);
+  const MIN_GAP = 12; // px minimum vertical gap between labels
+  for (let i=1; i<labels.length; i++) {
+    const prev = labels[i-1], curr = labels[i];
+    if (Math.abs(curr.ty - prev.ty) < MIN_GAP && curr.onRight === prev.onRight) {
+      curr.ty = prev.ty + MIN_GAP;
+      curr.by = curr.ty;
+    }
+  }
 
+  // Draw callouts
+  labels.forEach(lb => {
+    // Elbow polyline: slice-edge → bend → horizontal end
     g.append('polyline')
-      .attr('points', `${x1},${y1} ${x2},${y2} ${x3},${y3}`)
+      .attr('points', `${lb.ex},${lb.ey} ${lb.bx},${lb.by} ${lb.tx},${lb.ty}`)
       .attr('fill','none')
-      .attr('stroke', d.data.color)
+      .attr('stroke', lb.color)
       .attr('stroke-width', 0.8)
-      .attr('opacity', 0.65);
+      .attr('opacity', 0.7);
 
-    // Dot at slice contact point
+    // Dot at slice contact
     g.append('circle')
-      .attr('cx', x1).attr('cy', y1)
-      .attr('r', 1.5).attr('fill', d.data.color);
+      .attr('cx', lb.ex).attr('cy', lb.ey)
+      .attr('r', 1.8).attr('fill', lb.color);
 
-    // Label text right after horizontal tick
+    // Label
     g.append('text')
-      .attr('x', x3 + (onRight ? 3 : -3))
-      .attr('y', y3)
-      .attr('text-anchor', onRight ? 'start' : 'end')
+      .attr('x', lb.tx + (lb.onRight ? 3 : -3))
+      .attr('y', lb.ty)
+      .attr('text-anchor', lb.onRight ? 'start' : 'end')
       .attr('dominant-baseline','middle')
       .attr('font-family','Outfit, sans-serif')
       .attr('font-size','7.5px').attr('font-weight','600')
       .attr('fill', textColor)
-      .text(labelStr);
+      .text(lb.label);
   });
 
   // Center label
