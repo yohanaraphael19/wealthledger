@@ -175,8 +175,12 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .hero-age{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 .hero-val{font-size:clamp(36px,5vw,58px);font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1;position:relative;z-index:1;}
 .hero-currency{font-size:.38em;font-weight:500;opacity:.45;vertical-align:top;margin-top:9px;margin-right:1px;letter-spacing:0;}
-.hero-sunburst-zone{display:flex;align-items:center;justify-content:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
-#heroSunburst{flex-shrink:0;overflow:visible;}
+.hero-sunburst-zone{display:flex;flex-direction:column;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+#heroSunburst{flex-shrink:0;overflow:visible;width:clamp(260px,28vw,420px);height:clamp(260px,28vw,420px);}
+/* Sunburst legend pills */
+.sb-legend{display:flex;gap:16px;margin-top:12px;justify-content:center;}
+.sb-pill{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--muted);font-family:"Outfit",sans-serif;letter-spacing:.3px;}
+.sb-pill-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
 .sunburst-legend{display:flex;flex-direction:column;gap:10px;}
 .sb-section{margin-bottom:6px;}
 .sb-section-title{font-size:8px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
@@ -365,7 +369,11 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
           <div class="hero-val"><span class="hero-currency">TZS</span><span id="heroNum">—</span></div>
         </div>
         <div class="hero-sunburst-zone">
-          <svg id="heroSunburst" width="260" height="260"></svg>
+          <svg id="heroSunburst"></svg>
+          <div class="sb-legend">
+            <div class="sb-pill"><div class="sb-pill-dot" style="background:#00C9A7"></div>Stocks</div>
+            <div class="sb-pill"><div class="sb-pill-dot" style="background:#F5A623"></div>Land</div>
+          </div>
         </div>
       </div>
 
@@ -503,7 +511,8 @@ function renderSunburst(data) {
   if (!el) return;
   d3.select(el).selectAll('*').remove();
 
-  const W = 260, H = 260;
+  const W = el.getBoundingClientRect().width  || 260;
+  const H = el.getBoundingClientRect().height || 260;
   const isLight = document.body.classList.contains('light');
   const textColor  = isLight ? '#0A2E28' : '#E8F5F2';
   const mutedColor = isLight ? '#5A7A74' : '#6A9C94';
@@ -537,7 +546,11 @@ function renderSunburst(data) {
     .sum(d => d.children ? 0 : d.value)
     .sort((a,b) => b.value - a.value);
 
-  const Ri1=26, Ro1=45, Ri2=49, Ro2=76;
+  const SCALE = Math.min(W, H) / 260;  // scale factor relative to base 260px design
+  const Ri1=Math.round(26*SCALE), Ro1=Math.round(45*SCALE),
+        Ri2=Math.round(49*SCALE), Ro2=Math.round(76*SCALE);
+  const RADIAL = Math.round(18*SCALE);
+  const HORIZ  = Math.round(14*SCALE);
 
   const partition = d3.partition().size([2*Math.PI, 1]);
   partition(root);
@@ -546,7 +559,7 @@ function renderSunburst(data) {
   const makeArc = (ir, or, pad) => d3.arc()
     .startAngle(d => d.x0 + ROTATION)
     .endAngle(d => d.x1 + ROTATION)
-    .padAngle(pad).padRadius(55)
+    .padAngle(pad).padRadius(55*SCALE)
     .innerRadius(ir).outerRadius(or)
     .cornerRadius(2);
 
@@ -590,7 +603,7 @@ function renderSunburst(data) {
 
   // ── CALLOUT LABELS ────────────────────────────────────────
   // Only slices >= 2.5% get a label
-  const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.025);
+  const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.015);
 
   // Build label objects with positions DERIVED from the actual arc geometry
   const labels = labelNodes.map(d => {
@@ -606,12 +619,10 @@ function renderSunburst(data) {
     const ux = ex/len, uy = ey/len;
 
     // Elbow: go outward by a fixed amount, then horizontal
-    const RADIAL = 18;
-    const HORIZ  = 14;
-    const bx = ex + ux * RADIAL;   // elbow bend x
-    const by = ey + uy * RADIAL;   // elbow bend y
+    const bx = ex + ux * RADIAL;
+    const by = ey + uy * RADIAL;
     const onRight = bx >= 0;
-    const tx = bx + (onRight ? HORIZ : -HORIZ);  // text start x
+    const tx = bx + (onRight ? HORIZ : -HORIZ);
     const ty = by;
 
     // Name shortening
@@ -628,7 +639,7 @@ function renderSunburst(data) {
   // ── COLLISION AVOIDANCE ───────────────────────────────────
   // Sort by angle, then nudge overlapping labels apart vertically
   labels.sort((a,b) => a.angle - b.angle);
-  const MIN_GAP = 12; // px minimum vertical gap between labels
+  const MIN_GAP = Math.round(12*SCALE);
   for (let i=1; i<labels.length; i++) {
     const prev = labels[i-1], curr = labels[i];
     if (Math.abs(curr.ty - prev.ty) < MIN_GAP && curr.onRight === prev.onRight) {
@@ -659,7 +670,7 @@ function renderSunburst(data) {
       .attr('text-anchor', lb.onRight ? 'start' : 'end')
       .attr('dominant-baseline','middle')
       .attr('font-family','Outfit, sans-serif')
-      .attr('font-size','7.5px').attr('font-weight','600')
+      .attr('font-size', Math.max(6.5, 7.5*SCALE)+'px').attr('font-weight','600')
       .attr('fill', textColor)
       .text(lb.label);
   });
@@ -682,7 +693,7 @@ function toggleTheme(){
 (function(){
   try{const t=localStorage.getItem('wl_theme');if(t==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='🌙';}}catch(e){}
 })();
-const DC = ['#00C9A7','#F5A623','#00BF63','#3D9EFF','#C97BF5','#FF6B6B','#FFD166'];
+const DC = ['#00C9A7','#00A688','#007A64','#005A4A','#00E0BF','#3D9EFF','#FFD166']; // teal shades match sunburst stock colors
 
 function renderGauge(pct) {
   if(gaugeInst){gaugeInst.destroy();gaugeInst=null;}
@@ -898,11 +909,13 @@ async function loadData() {
     document.getElementById('rcProceeds').textContent=fmt(totalProceeds);
 
     // Donut + ticker list
-    renderDonut(tickers.map(tk=>Math.round(stockVals[tk])), tickers);
+    // Sort tickers by value desc so color slots are consistent (largest = slot 0 = teal)
+    const sortedTickers = [...tickers].sort((a,b)=>(stockVals[b]||0)-(stockVals[a]||0));
+    renderDonut(sortedTickers.map(tk=>Math.round(stockVals[tk])), sortedTickers);
     // Shorten long ticker display names
     const displayName = tk => tk.length > 9 ? tk.replace('-ETF','') + '<span style="font-size:7px;opacity:.6">-ETF</span>' : tk;
 
-    document.getElementById('tickerList').innerHTML = tickers.map((tk,i)=>{
+    document.getElementById('tickerList').innerHTML = sortedTickers.map((tk,i)=>{
       const val=stockVals[tk], cost=costByTk[tk]||0, pnl=val-cost, pct=cost>0?pnl/cost:0;
       const w=totalStockVal>0?(val/totalStockVal*100).toFixed(0):0;
       const chg=dailyChg[tk];
@@ -1010,6 +1023,15 @@ async function sendAIChat(){
 }
 
 loadData();
+
+// Re-render sunburst on resize (responsive scaling)
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    if (window._lastSunburstData) renderSunburst(window._lastSunburstData);
+  }, 200);
+});
 
 // ── LOG MODAL ─────────────────────────────────────────────
 function openLog(){document.getElementById('logModal').style.display='flex';document.body.style.overflow='hidden';switchTab('BUY');}
