@@ -77,8 +77,8 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .hdr-right{display:flex;align-items:center;gap:12px;}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
 .last-upd{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.ref-btn{background:var(--s3);border:1px solid var(--border);color:var(--teal);padding:5px 13px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
-.ref-btn:hover{background:var(--teal-dim);border-color:var(--teal);box-shadow:var(--glow-t);}
+.ref-btn{background:transparent;border:none;color:var(--muted);padding:6px;border-radius:7px;font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;width:30px;height:30px;}
+.ref-btn:hover{color:var(--teal);transform:rotate(180deg);}
 /* Theme toggle */
 .theme-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .2s;flex-shrink:0;}
 .theme-btn:hover{border-color:var(--teal);color:var(--teal);}
@@ -305,9 +305,9 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
   </div>
   <div class="hdr-right">
     <div class="live-dot"></div>
-    <span class="last-upd" id="lastUpdated">Loading…</span>
+    <span class="last-upd" id="lastUpdated"></span>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-    <button class="ref-btn" onclick="loadData()">↻ Refresh</button>
+    <button class="ref-btn" onclick="loadData()" title="Refresh">↻</button>
   </div>
 </header>
 
@@ -497,23 +497,15 @@ async function fetchSheet(range) {
 
 // ── CHARTS ────────────────────────────────────────────────
 let tsChartInst=null, donutInst=null, gaugeInst=null, allMonths=[];
-// ── D3 SUNBURST ───────────────────────────────────────────
-// Inner ring: Stocks vs Land (% of net worth)
 // ── D3 SUNBURST ────────────────────────────────────────────
-// Inner ring: Stocks (left/teal) · Land (right/gold)
-// Outer ring: per-ticker labels left, per-region labels right
-// Rotation: Land starts at top-right (π/2 offset so gold is on right)
 function renderSunburst(data) {
   const el = document.getElementById('heroSunburst');
   if (!el) return;
   d3.select(el).selectAll('*').remove();
 
   const W = 260, H = 260;
-  // Extra margin for outer labels
-  const LABEL_MARGIN = 48;
-  const R = (Math.min(W,H)/2) - LABEL_MARGIN;
   const isLight = document.body.classList.contains('light');
-  const textColor = isLight ? '#0A2E28' : '#E8F5F2';
+  const textColor  = isLight ? '#0A2E28' : '#E8F5F2';
   const mutedColor = isLight ? '#5A7A74' : '#6A9C94';
 
   const stockShades = ['#00C9A7','#00A688','#007A64','#005A4A','#00E0BF'];
@@ -522,17 +514,15 @@ function renderSunburst(data) {
   const totalVal = data.stockVal + data.landVal;
   if (totalVal <= 0) return;
 
-  // Hierarchy: Land first so it appears on the right (partition goes clockwise)
-  // We rotate the whole chart by -π/2 so 0 is at top, then offset
-  // To put Land on the right: arrange as [Stocks, Land] and rotate start by
-  // -π/2 + (landFraction * π) so Land sits symmetrically on the right
+  // Rotation math: make Land (gold) appear on the RIGHT side
+  // D3 partition: angles go 0..2π clockwise. Stocks is first child (~81%), Land second (~19%).
+  // We want Land centred at π/2 (right = 3 o'clock).
+  // Land occupies angles [stockFrac*2π .. 2π]. Its centre = (stockFrac + landFrac/2) * 2π.
+  // ROTATION shifts that centre to π/2.
   const stockFrac = data.stockVal / totalVal;
   const landFrac  = data.landVal  / totalVal;
-  // Rotation: put the boundary between Stocks and Land at the top (12 o'clock)
-  // then land spans rightward. Rotate so Stocks spans left half, Land right half
-  // offset = -π/2 puts start at top. We want Land on right so no extra offset needed
-  // since Stocks (larger) will naturally fill the left and Land the right.
-  const ROTATION = -Math.PI / 2; // start at top (12 o'clock), go clockwise
+  const landCentre = (stockFrac + landFrac / 2) * 2 * Math.PI;
+  const ROTATION   = Math.PI / 2 - landCentre;
 
   const hierarchy = {
     name: 'root',
@@ -540,15 +530,13 @@ function renderSunburst(data) {
       {
         name: 'Stocks', value: data.stockVal, color: '#00C9A7',
         children: data.tickers.map((t,i) => ({
-          name: t.name, value: t.val,
-          color: stockShades[i % stockShades.length]
+          name: t.name, value: t.val, color: stockShades[i % stockShades.length]
         }))
       },
       {
         name: 'Land', value: data.landVal, color: '#F5A623',
         children: data.regions.map((r,i) => ({
-          name: r.name, value: r.val,
-          color: landShades[i % landShades.length]
+          name: r.name, value: r.val, color: landShades[i % landShades.length]
         }))
       }
     ]
@@ -558,142 +546,114 @@ function renderSunburst(data) {
     .sum(d => d.children ? 0 : d.value)
     .sort((a,b) => b.value - a.value);
 
-  const innerR1 = R * 0.38;
-  const outerR1 = R * 0.64;
-  const outerR2 = R * 0.98;
+  // Radii — compact to leave room for callout labels
+  const Ri1 = 26, Ro1 = 45, Ri2 = 49, Ro2 = 76;
 
-  // Partition maps x0/x1 to [0, 2π]
   const partition = d3.partition().size([2 * Math.PI, 1]);
   partition(root);
 
-  // Arc generators — apply rotation offset via startAngle/endAngle
-  const arcInner = d3.arc()
+  const makeArc = (ir, or, pad) => d3.arc()
     .startAngle(d => d.x0 + ROTATION)
     .endAngle(d => d.x1 + ROTATION)
-    .padAngle(0.022).padRadius(R * 0.5)
-    .innerRadius(innerR1).outerRadius(outerR1)
-    .cornerRadius(3);
+    .padAngle(pad).padRadius(55)
+    .innerRadius(ir).outerRadius(or)
+    .cornerRadius(2);
 
-  const arcOuter = d3.arc()
-    .startAngle(d => d.x0 + ROTATION)
-    .endAngle(d => d.x1 + ROTATION)
-    .padAngle(0.016).padRadius(R * 0.5)
-    .innerRadius(outerR1 + 4).outerRadius(outerR2)
-    .cornerRadius(3);
-
-  // Label arc — midpoint of outer ring for text placement
-  const arcLabel = d3.arc()
-    .startAngle(d => d.x0 + ROTATION)
-    .endAngle(d => d.x1 + ROTATION)
-    .innerRadius(outerR2 + 8)
-    .outerRadius(outerR2 + 8);
+  const arcIn  = makeArc(Ri1, Ro1, 0.03);
+  const arcOut = makeArc(Ri2, Ro2, 0.02);
 
   el.setAttribute('width', W);
   el.setAttribute('height', H);
-
   const svg = d3.select(el);
-  const g = svg.append('g')
-    .attr('transform', `translate(${W/2},${H/2})`);
+  const g = svg.append('g').attr('transform', `translate(${W/2},${H/2})`);
 
-  // ── INNER RING ──────────────────────────────────────────
+  // Inner ring
   const innerNodes = root.children || [];
-  g.selectAll('.arc-inner')
-    .data(innerNodes)
-    .enter().append('path')
-    .attr('d', arcInner)
-    .attr('fill', d => d.data.color)
-    .attr('opacity', 0.95)
-    .append('title')
-    .text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
+  g.selectAll('.ai').data(innerNodes).enter()
+    .append('path').attr('d', arcIn)
+    .attr('fill', d => d.data.color).attr('opacity', 0.95)
+    .append('title').text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
 
-  // Inner ring labels (Stocks / Land) — inside the ring
-  const arcInnerMid = d3.arc()
-    .startAngle(d => d.x0 + ROTATION)
-    .endAngle(d => d.x1 + ROTATION)
-    .innerRadius((innerR1 + outerR1) / 2)
-    .outerRadius((innerR1 + outerR1) / 2);
-
-  g.selectAll('.lbl-inner')
-    .data(innerNodes)
-    .enter().append('text')
-    .attr('transform', d => `translate(${arcInnerMid.centroid(d)})`)
-    .attr('text-anchor','middle')
-    .attr('dominant-baseline','middle')
-    .attr('font-family','Outfit, sans-serif')
-    .attr('font-size','8px')
-    .attr('font-weight','700')
-    .attr('fill','#000')
-    .attr('opacity', 0.7)
-    .text(d => d.data.name.toUpperCase());
-
-  // ── OUTER RING ──────────────────────────────────────────
-  const outerNodes = innerNodes.flatMap(d => d.children || []);
-  g.selectAll('.arc-outer')
-    .data(outerNodes)
-    .enter().append('path')
-    .attr('d', arcOuter)
-    .attr('fill', d => d.data.color)
-    .attr('opacity', 0.82)
-    .append('title')
-    .text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
-
-  // ── OUTER LABELS ─────────────────────────────────────────
-  // Only label slices large enough to read (>2% of total)
-  const labelNodes = outerNodes.filter(d => (d.value / totalVal) >= 0.02);
-
-  labelNodes.forEach(d => {
-    const pct = ((d.value / totalVal) * 100).toFixed(1);
-    const midAngle = (d.x0 + d.x1) / 2 + ROTATION;
-    const onRight = Math.cos(midAngle) >= 0;
-
-    // Line from outer ring edge to label
-    const innerPt = arcOuter.centroid(d);
-    const labelR  = outerR2 + 14;
-    const outerPt = [Math.cos(midAngle) * labelR, Math.sin(midAngle) * labelR];
-    const textX   = Math.cos(midAngle) * (outerR2 + 20);
-    const textY   = Math.sin(midAngle) * (outerR2 + 20);
-
-    // Connector line
-    g.append('line')
-      .attr('x1', innerPt[0]).attr('y1', innerPt[1])
-      .attr('x2', outerPt[0]).attr('y2', outerPt[1])
-      .attr('stroke', d.data.color)
-      .attr('stroke-width', 1)
-      .attr('opacity', 0.5);
-
-    // Short name: truncate if needed
-    const maxLen = 8;
-    const name = d.data.name.length > maxLen
-      ? d.data.name.slice(0, maxLen - 1) + '…'
-      : d.data.name;
-
-    // Two-line label: name on first line, pct on second
-    const lbl = g.append('text')
-      .attr('x', textX).attr('y', textY)
-      .attr('text-anchor', onRight ? 'start' : 'end')
-      .attr('font-family','JetBrains Mono, monospace')
-      .attr('fill', d.data.color);
-
-    lbl.append('tspan')
-      .attr('x', textX).attr('dy','-0.5em')
-      .attr('font-size','8px').attr('font-weight','600')
-      .text(name);
-
-    lbl.append('tspan')
-      .attr('x', textX).attr('dy','1.1em')
-      .attr('font-size','8px').attr('font-weight','700')
-      .text(pct + '%');
+  // Percentage labels inside inner ring (no "STOCKS"/"LAND" text)
+  const arcInMid = makeArc((Ri1+Ro1)/2, (Ri1+Ro1)/2, 0);
+  innerNodes.forEach(node => {
+    const pct = ((node.value/totalVal)*100).toFixed(0)+'%';
+    const [lx, ly] = arcInMid.centroid(node);
+    if (node.value/totalVal >= 0.08) {
+      g.append('text')
+        .attr('x', lx).attr('y', ly)
+        .attr('text-anchor','middle').attr('dominant-baseline','middle')
+        .attr('font-family','JetBrains Mono, monospace')
+        .attr('font-size','7px').attr('font-weight','700')
+        .attr('fill','rgba(0,0,0,0.55)').attr('pointer-events','none')
+        .text(pct);
+    }
   });
 
-  // ── CENTER TEXT ─────────────────────────────────────────
+  // Outer ring
+  const outerNodes = innerNodes.flatMap(d => d.children || []);
+  g.selectAll('.ao').data(outerNodes).enter()
+    .append('path').attr('d', arcOut)
+    .attr('fill', d => d.data.color).attr('opacity', 0.85)
+    .append('title').text(d => `${d.data.name}: ${((d.value/totalVal)*100).toFixed(1)}%`);
+
+  // Callout labels — professional elbow connector style (like reference image)
+  const labelNodes = outerNodes.filter(d => d.value/totalVal >= 0.025);
+
+  labelNodes.forEach(d => {
+    const midAngle = (d.x0 + d.x1) / 2 + ROTATION;
+    const pct = ((d.value/totalVal)*100).toFixed(1);
+
+    // Shorten names: strip -ETF suffix for display, truncate long names
+    let name = d.data.name;
+    const hasETF = name.includes('-ETF');
+    if (hasETF) name = name.replace('-ETF','');
+    if (name.length > 9) name = name.slice(0,8)+'…';
+    if (hasETF) name = name + '-ETF';
+    const labelStr = name + ' - ' + pct + '%';
+
+    // Elbow line: radial segment → horizontal tick
+    const R1 = Ro2 + 8;   // start point (just outside outer ring)
+    const R2 = Ro2 + 20;  // elbow bend
+    const onRight = Math.cos(midAngle) >= 0;
+    const HORIZ = 12;     // length of horizontal tick
+
+    const x1 = Math.cos(midAngle) * R1, y1 = Math.sin(midAngle) * R1;
+    const x2 = Math.cos(midAngle) * R2, y2 = Math.sin(midAngle) * R2;
+    const x3 = x2 + (onRight ? HORIZ : -HORIZ), y3 = y2;
+
+    g.append('polyline')
+      .attr('points', `${x1},${y1} ${x2},${y2} ${x3},${y3}`)
+      .attr('fill','none')
+      .attr('stroke', d.data.color)
+      .attr('stroke-width', 0.8)
+      .attr('opacity', 0.65);
+
+    // Dot at slice contact point
+    g.append('circle')
+      .attr('cx', x1).attr('cy', y1)
+      .attr('r', 1.5).attr('fill', d.data.color);
+
+    // Label text right after horizontal tick
+    g.append('text')
+      .attr('x', x3 + (onRight ? 3 : -3))
+      .attr('y', y3)
+      .attr('text-anchor', onRight ? 'start' : 'end')
+      .attr('dominant-baseline','middle')
+      .attr('font-family','Outfit, sans-serif')
+      .attr('font-size','7.5px').attr('font-weight','600')
+      .attr('fill', textColor)
+      .text(labelStr);
+  });
+
+  // Center label
   g.append('text')
     .attr('text-anchor','middle').attr('dy','0.15em')
     .attr('font-family','JetBrains Mono, monospace')
-    .attr('font-size','10px').attr('font-weight','700')
-    .attr('fill', textColor)
+    .attr('font-size','8px').attr('font-weight','700')
+    .attr('fill', mutedColor).attr('letter-spacing','0.5px')
     .text('NET WORTH');
 }
-
 // ── THEME TOGGLE ───────────────────────────────────────────
 function toggleTheme(){
   const isLight=document.body.classList.toggle('light');
@@ -949,7 +909,7 @@ async function loadData() {
     // Time series chart
     renderTimeSeries(allMonths);
 
-    document.getElementById('lastUpdated').textContent='Updated '+new Date().toLocaleTimeString();
+    document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString();
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('dashboard').style.display='block';
 
