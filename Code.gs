@@ -8,15 +8,22 @@ const PRICES_SHEET   = "Current_Prices";   // ← new dedicated sheet
 const MY_TICKERS     = ["CRDB", "NMB", "KCB", "NICO", "AFRIPRISE",
                         "DSE", "DCB", "MKCB", "SWIS", "IEACLC-ETF"];
 const REFERER = "https://yohanaraphael19.github.io/wealthledger/"; // for API key referrer restrictions
+const GROQ_API_KEY = "YOUR_GROQ_API_KEY";  // get free at https://console.groq.com
+const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
 
 
-// ── MASTER TRIGGER ────────────────────────────────────────────────────────────
+// ── MASTER TRIGGER (daily) ───────────────────────────────────────────────────
 function dailyDSEUpdate() {
   snapshotFromITrust();       // 1. log OHLC to Historical_Log
   updateCurrentPricesSheet(); // 2. update Current_Prices sheet
   updateStockHoldingsPrices();// 3. push latest prices into Stock Holdings col L
   update52WHighLow();         // 4. refresh 52-week high/low from history
-  runAIAnalysis();            // 5. AI daily report
+}
+
+// ── WEEKLY ANALYSIS TRIGGER ───────────────────────────────────────────────────
+function weeklyAnalysis() {
+  dailyDSEUpdate();           // update prices first
+  runAIAnalysis();            // then run AI analysis
 }
 
 
@@ -450,7 +457,7 @@ ${histText}`,
 }
 
 
-// ── RUN AI ANALYSIS (daily) ───────────────────────────────────────────────────
+// ── RUN AI ANALYSIS (weekly, via Groq free API) ──────────────────────────────
 function runAIAnalysis() {
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
   const logSheet = ss.getSheetByName(HISTORY_SHEET);
@@ -521,28 +528,29 @@ Give 3 specific, actionable steps for the next 30 days.
 
 Keep analysis concise, use TZS throughout, tailor all advice to the DSE/Tanzania market context.`;
 
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 8000 }
-  };
-
   try {
-    const response = UrlFetchApp.fetch(GEMINI_URL, {
+    const response = UrlFetchApp.fetch(GROQ_URL, {
       method: 'post', contentType: 'application/json',
-      headers: { 'Referer': REFERER },
-      payload: JSON.stringify(payload), muteHttpExceptions: true
+      headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      payload: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 8000
+      }),
+      muteHttpExceptions: true
     });
 
     const code   = response.getResponseCode();
     const result = JSON.parse(response.getContentText());
-    if (code !== 200) { console.error("Gemini error: " + result.error.message); return; }
+    if (code !== 200) { console.error("Groq error: " + (result.error?.message || code)); return; }
 
-    const aiResponse = result.candidates[0].content.parts[0].text;
+    const aiResponse = result.choices[0].message.content.trim();
 
     let insightSheet = ss.getSheetByName("AI_Insights");
     if (!insightSheet) insightSheet = ss.insertSheet("AI_Insights");
     insightSheet.clearContents();
-    insightSheet.getRange("A1").setValue("WealthLedger AI Analysis — Powered by Gemini 2.0 Flash");
+    insightSheet.getRange("A1").setValue("WealthLedger AI Analysis — Powered by Groq Llama 3.3 70B");
     insightSheet.getRange("A2").setValue("Generated: " + new Date().toLocaleString());
     insightSheet.getRange("A1").setFontSize(14).setFontWeight("bold").setFontColor("#1A5F5F");
     insightSheet.getRange("A2").setFontSize(10).setFontColor("#8A8680");
@@ -621,69 +629,6 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
   } catch(err) {}
-
-  // Route 3: Dashboard chat proxy (uses Gemini)
-  const body     = JSON.parse(contents);
-  const question = body.question || '';
-  const context  = body.context  || '';
-
-  const prompt = `You are a DSE (Dar es Salaam Stock Exchange) financial advisor for a Tanzanian investor.
-
-Portfolio context:
-${context}
-
-Investor asks: "${question}"
-
-Rules:
-- Plain prose only, no tables, no bullet symbols
-- Use TZS values from context
-- Match answer length to question complexity: simple questions get 1-2 sentences, analysis gets full paragraphs
-- Always finish your sentences completely`;
-
-  try {
-    const response = UrlFetchApp.fetch(GEMINI_URL, {
-      method: 'post', contentType: 'application/json',
-      headers: { 'Referer': REFERER },
-      payload: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8000 }
-      }),
-      muteHttpExceptions: true
-    });
-
-    const responseCode = response.getResponseCode();
-    const responseText = response.getContentText();
-
-    // ── Quota handling: return structured error so frontend can show reset info
-    if (responseCode === 429) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ answer: null, quotaError: true, code: 429 }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    if (responseCode !== 200) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ answer: 'API Error ' + responseCode + ': ' + responseText.slice(0, 200) }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    const result    = JSON.parse(responseText);
-    const candidate = result.candidates?.[0];
-    if (!candidate) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ answer: 'Response blocked: ' + (result.promptFeedback?.blockReason || 'Unknown') }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ answer: candidate.content?.parts?.[0]?.text || 'No text in response.' }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ answer: 'Script error: ' + err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
 }
 
 

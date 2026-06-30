@@ -265,34 +265,7 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 .ai-card-sub{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.5;}
 .ai-gen{font-size:9px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:5px;}
 .ai-gen-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-.quota-ban{background:var(--gold-dim);border:1px solid rgba(245,166,35,.25);border-radius:9px;padding:11px 14px;margin-bottom:14px;display:none;}
-.quota-ban.show{display:flex;align-items:center;gap:9px;}
-.qb-text{flex:1;}
-.qb-title{font-size:11px;font-weight:700;margin-bottom:2px;}
-.qb-sub{font-size:10px;color:var(--muted);}
-.qb-time{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--gold);white-space:nowrap;}
 .ai-div{border:none;border-top:1px solid var(--border);margin:0 0 16px;}
-.ai-chat-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.ai-chat-title{font-size:12px;font-weight:700;}
-.ai-lim-pill{font-size:9px;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:2px 8px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
-.ai-msgs{min-height:90px;max-height:360px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:9px;display:flex;flex-direction:column;gap:9px;scroll-behavior:smooth;}
-.ai-msg{display:flex;gap:7px;align-items:flex-start;}
-.ai-msg-av{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;}
-.ai-msg.user .ai-msg-av{background:var(--teal);color:#000;font-size:9px;font-weight:800;}
-.ai-msg.bot .ai-msg-av{background:var(--s2);border:1px solid var(--border);}
-.ai-msg-txt{font-size:11px;line-height:1.6;color:var(--text);padding-top:3px;}
-.ai-msg.user .ai-msg-txt{color:var(--teal);font-weight:500;}
-.ai-inp-row{display:flex;gap:7px;}
-.ai-inp{flex:1;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:11px;font-family:'Outfit',sans-serif;background:var(--s2);color:var(--text);outline:none;transition:border-color .2s;}
-.ai-inp:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(0,201,167,.1);}
-.ai-inp::placeholder{color:var(--muted);}
-.ai-send{background:var(--teal);color:#000;border:none;border-radius:9px;padding:9px 18px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
-.ai-send:hover{background:var(--teal-d);box-shadow:var(--glow-t);}
-.ai-send:disabled{opacity:.3;cursor:not-allowed;}
-.ai-lim-bar{margin-top:7px;display:flex;align-items:center;gap:7px;}
-.ai-lim-track{flex:1;height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
-.ai-lim-fill{height:100%;background:var(--teal);border-radius:2px;transition:width .4s;}
-.ai-lim-lbl{font-size:8px;color:var(--muted);white-space:nowrap;font-family:'JetBrains Mono',monospace;}
 
 /* ── RESPONSIVE ──────────────────────────────────────────── */
 @media(max-width:1100px){
@@ -489,32 +462,10 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
         </div>
       </div>
       <div class="ai-body" id="aiBody">
-        <div class="ai-gen" id="aiGenerated"><span class="ai-gen-dot"></span> Loading…</div>
-        <div class="quota-ban" id="quotaBanner">
-          <div style="font-size:18px">⏳</div>
-          <div class="qb-text"><div class="qb-title">Gemini quota reached for today</div><div class="qb-sub">Resets at midnight Pacific Time.</div></div>
-          <div class="qb-time" id="quotaResetTime">—</div>
-        </div>
         <div class="ai-3cards">
           <div class="ai-card"><div class="ai-card-icon">💊</div><div class="ai-card-lbl">Portfolio Health</div><div class="ai-card-val" id="aiHealth">—</div><div class="ai-card-sub" id="aiHealthSub"></div></div>
           <div class="ai-card"><div class="ai-card-icon">🎯</div><div class="ai-card-lbl">Top Buy Pick</div><div class="ai-card-val" id="aiBuy">—</div><div class="ai-card-sub" id="aiBuySub"></div></div>
           <div class="ai-card"><div class="ai-card-icon">⚡</div><div class="ai-card-lbl">30-Day Action</div><div class="ai-card-val" id="aiAction">—</div><div class="ai-card-sub" id="aiActionSub"></div></div>
-        </div>
-        <hr class="ai-div">
-        <div class="ai-chat-hdr">
-          <div class="ai-chat-title">Ask your AI Advisor</div>
-          <div class="ai-lim-pill" id="chatLimitLabel">20 remaining</div>
-        </div>
-        <div class="ai-msgs" id="aiMessages">
-          <div class="ai-msg bot"><div class="ai-msg-av">🤖</div><div class="ai-msg-txt">Hello! I have your full portfolio context. Ask me anything about your DSE investments.</div></div>
-        </div>
-        <div class="ai-inp-row">
-          <input class="ai-inp" id="aiInput" type="text" placeholder="e.g. Should I buy more CRDB?" onkeydown="if(event.key==='Enter')sendAIChat()"/>
-          <button class="ai-send" id="aiSendBtn" onclick="sendAIChat()">Send</button>
-        </div>
-        <div class="ai-lim-bar">
-          <div class="ai-lim-track"><div class="ai-lim-fill" id="aiLimitFill" style="width:0%"></div></div>
-          <div class="ai-lim-lbl" id="aiLimitText">0 / 20 used today</div>
         </div>
       </div>
     </div>
@@ -525,9 +476,9 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
 <script>
 const SHEET_ID  = '1zv-9vD6VsfCcDgr-PH92_IEaGzZPbuTMRGYawrBkaHo';
 const API_KEY   = 'AIzaSyCEunEzrjVDASNRWX57yZcMJPPrHFrBcyY';
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbwncUbWyrXMgiLqbNX02RmMgoK7O-xIEImp1j7_ZVqYYVSfBYJD-MOfWbJIb83R0Y8R-Q/exec';
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzJpAxQLpHs_rPaAPJWImpKxkg0eDrSKVoFpDRHvYGQd_0kbhsRSdMFhMq_1AIpiaIJJg/exec';
 
-const BROKER = 0.024, CHAT_LIMIT = 20;
+const BROKER = 0.024;
 
 const fmt    = n => 'TZS ' + Math.round(n).toLocaleString('en-US');
 const fmtN   = n => Math.round(n).toLocaleString('en-US');
@@ -914,6 +865,7 @@ async function loadData() {
     sells.forEach(s=>{soldQ[s.ticker]=(soldQ[s.ticker]||0)+s.sharesSold;});
     const tickers=[...new Set(Object.keys(bought))];
     const netShares={};tickers.forEach(tk=>{netShares[tk]=(bought[tk]||0)-(soldQ[tk]||0);});
+    const activeTickers = tickers.filter(tk => netShares[tk] > 0); // exclude fully-sold positions
 
     // Cost basis — correct formula
     const costInv={},costRec={};
@@ -998,15 +950,15 @@ async function loadData() {
     document.getElementById('rcLandVal').textContent=fmt(totalLandVal);
     document.getElementById('rcLandSub').textContent=`${plots.length} plots · ${Math.round(totalSqm).toLocaleString()} sqm`;
     document.getElementById('rcShares').textContent=fmtN(totalShares);
-    document.getElementById('rcSharesSub').textContent=tickers.map(tk=>`${tk} ${fmtN(netShares[tk])}`).join(' · ');
+    document.getElementById('rcSharesSub').textContent=activeTickers.map(tk=>`${tk} ${fmtN(netShares[tk])}`).join(' · ');
     document.getElementById('rcProceeds').textContent=fmt(totalProceeds);
 
-    // Donut + ticker list
-    renderDonut(tickers.map(tk=>Math.round(stockVals[tk])), tickers);
+    // Donut + ticker list (only active holdings with shares > 0)
+    renderDonut(activeTickers.map(tk=>Math.round(stockVals[tk])), activeTickers);
     // Shorten long ticker display names
     const displayName = tk => tk.length > 9 ? tk.replace('-ETF','') + '<span style="font-size:7px;opacity:.6">-ETF</span>' : tk;
 
-    document.getElementById('tickerList').innerHTML = tickers.map((tk,i)=>{
+    document.getElementById('tickerList').innerHTML = activeTickers.map((tk,i)=>{
       const val=stockVals[tk], cost=costByTk[tk]||0, pnl=val-cost, pct=cost>0?pnl/cost:0;
       const w=totalStockVal>0?(val/totalStockVal*100).toFixed(0):0;
       const chg=dailyChg[tk];
@@ -1045,16 +997,8 @@ async function loadData() {
   }
 }
 
-// ── QUOTA ─────────────────────────────────────────────────
-const TODAY_KEY=new Date().toISOString().slice(0,10);
-function getChatCount(){try{const s=JSON.parse(localStorage.getItem('wl_chat')||'{}');return s.date===TODAY_KEY?(s.count||0):0;}catch(e){return 0;}}
-function saveChatCount(n){try{localStorage.setItem('wl_chat',JSON.stringify({date:TODAY_KEY,count:n}));}catch(e){}}
-function getQuotaHit(){try{const s=JSON.parse(localStorage.getItem('wl_quota')||'{}');return s.date===TODAY_KEY&&s.hit===true;}catch(e){return false;}}
-function setQuotaHit(){try{localStorage.setItem('wl_quota',JSON.stringify({date:TODAY_KEY,hit:true}));}catch(e){}}
-function getQRC(){const now=new Date();const nl=new Date(now.getTime()-8*3600000);const mn=new Date(nl);mn.setUTCHours(24,0,0,0);const diff=mn-nl;const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);return`Resets in ${h}h ${m}m`;}
-function showQuotaBanner(){document.getElementById('quotaBanner').classList.add('show');document.getElementById('quotaResetTime').textContent=getQRC();document.getElementById('aiInput').placeholder='Quota reached';document.getElementById('aiSendBtn').disabled=true;setInterval(()=>{document.getElementById('quotaResetTime').textContent=getQRC();},60000);}
-
-let chatCount=getChatCount(), aiCtx='', fullReport='';
+// ── AI CONTEXT ──────────────────────────────────────────────────
+let aiCtx='', fullReport='';
 function toggleAI(){const b=document.getElementById('aiBody'),ch=document.getElementById('aiChevron');const o=b.classList.toggle('open');ch.classList.toggle('open',o);if(o&&!b.dataset.loaded){b.dataset.loaded='1';loadAIParsed();}}
 // buildAIContext — assembles full portfolio snapshot (holdings, fundamentals, land) for Gemini prompt
 function buildAIContext() {
@@ -1110,7 +1054,6 @@ async function loadAIParsed(){
     const ir=await fetchSheet('AI_Insights!A4:A4');fullReport=ir[0]?.[0]||'';
     aiCtx+=`\n\nLatest AI Analysis:\n${fullReport.slice(0,2000)}`;
   }catch(e){document.getElementById('aiGenerated').innerHTML='<span style="color:var(--red)">⚠ No analysis yet</span>';}
-  if(getQuotaHit())showQuotaBanner();updateLimitUI();
 }
 // regenerateAnalysis — ↻ button calls proxy to re-run runAIAnalysis() server-side, then refreshes display
 async function regenerateAnalysis() {
@@ -1174,38 +1117,6 @@ function openReport(){
   secs.forEach(sec=>{const ls=sec.trim().split('\n');const title=ls[0].trim().replace(/\*\*/g,'');const body=ls.slice(1).join('\n').trim();const bh=body.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^\s*[\*\-]\s+/gm,'').split('\n').filter(l=>l.trim()).map(l=>`<div style="padding:3px 0 3px 10px;border-left:2px solid var(--border);margin:3px 0;font-size:11px;line-height:1.6;color:var(--text)">${l.trim()}</div>`).join('');html+=`<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">${title}</div>${bh}</div>`;});
   document.getElementById('modalBody').innerHTML=html||'<em style="color:var(--muted)">No report yet.</em>';
   m.style.display='flex';
-}
-function updateLimitUI(){
-  const used=chatCount,pct=Math.min((used/CHAT_LIMIT)*100,100);
-  document.getElementById('aiLimitFill').style.width=pct+'%';
-  document.getElementById('aiLimitFill').style.background=used>=CHAT_LIMIT?'var(--red)':'var(--teal)';
-  document.getElementById('aiLimitText').textContent=`${used} / ${CHAT_LIMIT} used today`;
-  document.getElementById('chatLimitLabel').textContent=`${CHAT_LIMIT-used} remaining`;
-  if(used>=CHAT_LIMIT){document.getElementById('aiSendBtn').disabled=true;document.getElementById('aiInput').placeholder='Limit reached.';}
-}
-function appendMsg(role,text){
-  const box=document.getElementById('aiMessages');
-  const div=document.createElement('div');div.className='ai-msg '+role;
-  const r=text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-  div.innerHTML=`<div class="ai-msg-av">${role==='user'?'You':'🤖'}</div><div class="ai-msg-txt">${r}</div>`;
-  box.appendChild(div);setTimeout(()=>{box.scrollTop=box.scrollHeight;},50);
-}
-async function sendAIChat(){
-  if(chatCount>=CHAT_LIMIT||getQuotaHit())return;
-  const inp=document.getElementById('aiInput');const q=inp.value.trim();if(!q)return;
-  inp.value='';appendMsg('user',q);document.getElementById('aiSendBtn').disabled=true;
-  const td=document.createElement('div');td.className='ai-msg bot';td.id='ai_t';
-  td.innerHTML='<div class="ai-msg-av">🤖</div><div class="ai-msg-txt" style="color:var(--muted)">Thinking…</div>';
-  document.getElementById('aiMessages').appendChild(td);
-  setTimeout(()=>{document.getElementById('aiMessages').scrollTop=99999;},50);
-  try{
-    const res=await fetch(PROXY_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({question:q,context:aiCtx})});
-    const data=await res.json();document.getElementById('ai_t')?.remove();
-    if(data.quotaError){setQuotaHit();showQuotaBanner();appendMsg('bot','⏳ Quota reached for today.');return;}
-    appendMsg('bot',data.answer||'No response.');chatCount++;saveChatCount(chatCount);
-  }catch(e){document.getElementById('ai_t')?.remove();appendMsg('bot','Connection error.');}
-  updateLimitUI();
-  if(chatCount<CHAT_LIMIT&&!getQuotaHit())document.getElementById('aiSendBtn').disabled=false;
 }
 
 loadData();
