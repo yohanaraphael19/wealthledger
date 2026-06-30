@@ -3,3 +3,6 @@
 
 # Financial report PDFs — uploaded to Google Drive, not stored in git
 *.pdf
+
+# Apps Script — contains API keys, deployed separately via script.google.com
+Code.gs
