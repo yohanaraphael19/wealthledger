@@ -8,8 +8,8 @@ const PRICES_SHEET   = "Current_Prices";   // ← new dedicated sheet
 const MY_TICKERS     = ["CRDB", "NMB", "KCB", "NICO", "AFRIPRISE",
                         "DSE", "DCB", "MKCB", "SWIS", "IEACLC-ETF"];
 const REFERER = "https://yohanaraphael19.github.io/wealthledger/"; // for API key referrer restrictions
-const GROQ_API_KEY = "YOUR_GROQ_API_KEY";  // get free at https://console.groq.com
 const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
+function groqKey() { return PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY') || ''; }
 
 
 // ── MASTER TRIGGER (daily) ───────────────────────────────────────────────────
@@ -370,48 +370,69 @@ function generateSimulationData() {
 
 
 // ── HELPER: Build rich portfolio context from source sheets ───────────────────
+// Computes values from raw shares×prices (like frontend) instead of formula cells
 function buildPortfolioContext() {
   const ss       = SpreadsheetApp.getActiveSpreadsheet();
   const holdings = ss.getSheetByName("Stock Holdings");
   const sold     = ss.getSheetByName("Sold Trades");
   const land     = ss.getSheetByName("Land & Plots");
   const history  = ss.getSheetByName("Historical_Log");
+  const pricesSh = ss.getSheetByName("Current_Prices");
 
-  const holdingsData = holdings.getRange(5, 1, 38, 14).getValues().filter(r => r[3]);
-  const soldData     = sold.getRange(5, 1, 30, 8).getValues().filter(r => r[2]);
-  const landData     = land.getRange(5, 1, 6, 13).getValues().filter(r => r[2]);
+  const BROKER   = 0.024;
 
-  const totalTrueCost     = holdings.getRange("I44").getValue();
-  const totalSoldProceeds = sold.getRange("H36").getValue();
-  const costBasis         = totalTrueCost - totalSoldProceeds;
-  const landValue         = land.getRange("L29").getValue();
-  const stockValue        = holdingsData.reduce((sum, r) => sum + (Number(r[12]) || 0), 0);
-  const totalNetWorth     = stockValue + landValue;
-  const unrealizedPL      = stockValue - costBasis;
+  // ── Read raw data ──
+  const holdingsData = holdings.getRange(5, 1, 50, 15).getValues().filter(r => r[3] && r[4] && r[5]);
+  const soldData     = sold.getRange(5, 1, 50, 8).getValues().filter(r => r[2] && r[3] && r[4]);
+  const landData     = land.getRange(5, 1, 20, 13).getValues().filter(r => r[2]);
+  const priceRows    = pricesSh ? pricesSh.getRange(2, 1, Math.max(1, pricesSh.getLastRow()-1), 3).getValues() : [];
 
-  const allHoldingTickers = holdings.getRange(5, 4, 38, 1).getValues().flat();
-  const allHoldingShares  = holdings.getRange(5, 5, 38, 1).getValues().flat();
-  const allSoldTickers    = sold.getRange(5, 3, 30, 1).getValues().flat();
-  const allSoldShares     = sold.getRange(5, 4, 30, 1).getValues().flat();
+  // ── Price map from Current_Prices sheet ──
+  const priceMap = {};
+  priceRows.forEach(r => { const tk = String(r[0]).trim().toUpperCase(); if (tk && r[2]) priceMap[tk] = Number(r[2]); });
 
-  function sumIfTicker(ticker, tickers, values) {
-    return tickers.reduce((sum, t, i) => t === ticker ? sum + (Number(values[i]) || 0) : sum, 0);
-  }
+  // ── Compute net shares (bought - sold) ──
+  const bought = {}, soldQ = {};
+  holdingsData.forEach(r => { const tk = String(r[3]).trim().toUpperCase(); bought[tk] = (bought[tk] || 0) + Number(r[4]); });
+  soldData.forEach(r =>     { const tk = String(r[2]).trim().toUpperCase(); soldQ[tk] = (soldQ[tk] || 0) + Number(r[3]); });
+  const tickers = [...new Set([...Object.keys(bought), ...Object.keys(soldQ)])];
+  const netShares = {};
+  tickers.forEach(tk => { netShares[tk] = (bought[tk] || 0) - (soldQ[tk] || 0); });
 
-  const crdbShares  = sumIfTicker("CRDB", allHoldingTickers, allHoldingShares) - sumIfTicker("CRDB", allSoldTickers, allSoldShares);
-  const etfShares   = sumIfTicker("IEACLC-ETF", allHoldingTickers, allHoldingShares) - sumIfTicker("IEACLC-ETF", allSoldTickers, allSoldShares);
-  const totalShares = crdbShares + etfShares;
+  // ── Cost basis (same as frontend) ──
+  const costInv = {}, costRec = {};
+  holdingsData.forEach(r => { const tk = String(r[3]).trim().toUpperCase(); costInv[tk] = (costInv[tk] || 0) + Number(r[4]) * Number(r[5]) * (1 + BROKER); });
+  soldData.forEach(r =>     { const tk = String(r[2]).trim().toUpperCase(); costRec[tk] = (costRec[tk] || 0) + Number(r[3]) * Number(r[4]) * (1 - BROKER); });
+  const costByTk = {};
+  tickers.forEach(tk => { costByTk[tk] = (costInv[tk] || 0) - (costRec[tk] || 0); });
+  const costBasis = Object.values(costByTk).reduce((a, b) => a + b, 0);
 
+  // ── Stock values: shares × current price (NOT formula columns) ──
+  const stockVals = {};
+  tickers.forEach(tk => { stockVals[tk] = (netShares[tk] || 0) * (priceMap[tk] || 0); });
+  const stockValue = Object.values(stockVals).reduce((a, b) => a + b, 0);
+  const unrealizedPL = stockValue - costBasis;
+
+  // ── Land value from raw data ──
+  const landValue = landData.reduce((sum, r) => sum + (Number(r[11]) || 0), 0);
+  const totalNetWorth = stockValue + landValue;
+
+  // ── Per-ticker shares from ALL positions (not just holdingsData) ──
+  const crdbShares = netShares['CRDB'] || 0;
+  const etfShares  = netShares['IEACLC-ETF'] || 0;
+  const totalShares = Object.values(netShares).reduce((a, b) => a + b, 0);
+
+  // ── Build context strings ──
   const holdingsText = holdingsData
-    .map(r => `  ${r[1]} | ${r[3]} | ${r[4]} shares @ TZS ${r[5]} | True Cost: TZS ${r[8]} | Current Value: TZS ${r[12]} | P&L: TZS ${r[13]} | Return: ${r[14]}`)
+    .map(r => `  ${r[1]} | ${String(r[3]).trim().toUpperCase()} | ${r[4]} shares @ TZS ${Number(r[5]).toLocaleString()} | True Cost: TZS ${(Number(r[4])*Number(r[5])*(1+BROKER)).toLocaleString()} | Current Value: TZS ${((netShares[String(r[3]).trim().toUpperCase()]||0)*Number(r[4])>0?(Number(r[4])*(priceMap[String(r[3]).trim().toUpperCase()]||0)).toLocaleString():'—')}`)
     .join("\n");
 
   const soldText = soldData.length
-    ? soldData.map(r => `  ${r[0]} | ${r[2]} | ${r[3]} shares @ TZS ${r[4]} | Net Proceeds: TZS ${r[7]}`).join("\n")
+    ? soldData.map(r => `  ${r[0]} | ${String(r[2]).trim().toUpperCase()} | ${r[3]} shares @ TZS ${Number(r[4]).toLocaleString()} | Net Proceeds: TZS ${(Number(r[3])*Number(r[4])*(1-BROKER)).toLocaleString()}`).join("\n")
     : "No sold trades yet";
 
   const landText = landData
-    .map(r => `  ${r[2]}, ${r[3]} | ${r[4]} | ${r[5]} | ${r[6]} | Purchase: TZS ${r[8]} | Proc Fee: TZS ${r[9]} | True Cost: TZS ${r[10]} | Current Value: TZS ${r[11]} | Gain: TZS ${r[12]}`)
+    .map(r => `  ${r[2]}, ${r[3]} | ${r[4]} | ${r[5]} | ${r[6]} | Purchase: TZS ${Number(r[8]).toLocaleString()} | Proc Fee: TZS ${Number(r[9]).toLocaleString()} | True Cost: TZS ${Number(r[10]).toLocaleString()} | Current Value: TZS ${Number(r[11]).toLocaleString()} | Gain: TZS ${(Number(r[11])-Number(r[10])).toLocaleString()}`)
     .join("\n");
 
   const histLastRow = history.getLastRow();
@@ -430,10 +451,10 @@ Stock Portfolio Value: TZS ${stockValue.toLocaleString()}
 Cost Basis (Stocks): TZS ${costBasis.toLocaleString()}
 Unrealized P&L: TZS ${unrealizedPL.toLocaleString()}
 Land Portfolio Value: TZS ${landValue.toLocaleString()}
-CRDB Shares Held: ${crdbShares} | IEACLC-ETF Shares Held: ${etfShares} | Total: ${totalShares}
+CRDB Shares Held: ${crdbShares} | IEACLC-ETF Shares Held: ${etfShares} | Total Shares: ${totalShares}
 
 === STOCK HOLDINGS (${holdingsData.length} trades) ===
-Date | Ticker | Shares | Buy Price | True Cost | Current Value | P&L | Return
+Date | Ticker | Shares | Buy Price | True Cost | Current Value
 ${holdingsText}
 
 === SOLD TRADES ===
@@ -445,8 +466,8 @@ Region | District | Street | Size | Date | Purchase Price | Proc Fee | True Cost
 ${landText}
 
 === FUNDAMENTALS ===
-Ticker | EPS (TZS) | BVPS (TZS) | ROE (%) | 52W High | 52W Low | % from High
-${(()=>{try{const f=ss.getSheetByName('Fundamentals');if(!f)return'Not available.';const d=f.getRange(2,1,10,6).getValues().filter(r=>r[0]);if(!d.length)return'No data yet.';return d.map(r=>{const tk=String(r[0]).trim().toUpperCase();const eps=r[1]||'—';const bv=r[2]||'—';const roe=r[3]||'—';const h52=r[4]||'—';const l52=r[5]||'—';return '  '+tk+': EPS=TZS '+eps+' | BVPS=TZS '+bv+' | ROE='+roe+'% | 52W H='+h52+' L='+l52;}).join('\n');}catch(e){return'Error reading Fundamentals.';}})()}
+Ticker | EPS (TZS) | BVPS (TZS) | ROE (%) | 52W High | 52W Low
+${(()=>{try{const f=ss.getSheetByName('Fundamentals');if(!f)return'Not available.';const d=f.getRange(2,1,10,6).getValues().filter(r=>r[0]);if(!d.length)return'No data yet.';return d.map(r=>{const tk=String(r[0]).trim().toUpperCase();return '  '+tk+': EPS=TZS '+(r[1]||'—')+' | BVPS=TZS '+(r[2]||'—')+' | ROE='+(r[3]||'—')+'% | 52W H='+(r[4]||'—')+' L='+(r[5]||'—');}).join('\n');}catch(e){return'Error reading Fundamentals.';}})()}
 
 === MARKET HISTORY (last ${histRows} entries ≈ 3 months) ===
 Date | Ticker | Open | Close | High | Low | Change%
@@ -459,63 +480,27 @@ ${histText}`,
 
 // ── RUN AI ANALYSIS (weekly, via Groq free API) ──────────────────────────────
 function runAIAnalysis() {
-  const ss      = SpreadsheetApp.getActiveSpreadsheet();
-  const logSheet = ss.getSheetByName(HISTORY_SHEET);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   const { context, totalNetWorth, stockValue, costBasis,
           unrealizedPL, landValue, crdbShares, etfShares, totalShares } = buildPortfolioContext();
 
-  const allHistory  = logSheet.getDataRange().getValues();
-  const rows        = allHistory.slice(1);
-  const tickerStats = {};
-  rows.forEach(row => {
-    const ticker = String(row[1]).trim().toUpperCase();
-    const close  = row[3];
-    const div    = row[8] || 0;
-    if (!ticker || typeof close !== 'number' || close <= 0) return;
-    if (!tickerStats[ticker]) tickerStats[ticker] = { prices: [], dividend: div };
-    tickerStats[ticker].prices.push(close);
-  });
-
-  const summaries = [];
-  Object.keys(tickerStats).forEach(tk => {
-    const prices = tickerStats[tk].prices;
-    const first  = prices[0];
-    const last   = prices[prices.length - 1];
-    const avg    = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-    const trend  = ((last - first) / first * 100).toFixed(1);
-    const div    = tickerStats[tk].dividend;
-    const yld    = div > 0 && last > 0 ? ((div / last) * 100).toFixed(2) : 0;
-    summaries.push(`${tk}: Last=TZS ${last}, 6M-Trend=${trend}%, Yield=${yld}%, Min=${Math.min(...prices)}, Max=${Math.max(...prices)}, Avg=${avg}`);
-  });
-
-  const totalReturn = costBasis > 0 ? ((unrealizedPL / costBasis) * 100).toFixed(1) : 0;
-
+  // Include the full portfolio context (holdings, sold trades, land, fundamentals, market history)
   const prompt = `You are a professional financial analyst specializing in the Dar es Salaam Stock Exchange (DSE), Tanzania.
 
-## MY CURRENT PORTFOLIO
-- Total Net Worth: TZS ${totalNetWorth.toLocaleString()}
-- Stock Portfolio Value: TZS ${stockValue.toLocaleString()}
-- Land Portfolio Value: TZS ${landValue.toLocaleString()}
-- True Cost Basis (inc. 2.4% broker fees, net of proceeds): TZS ${costBasis.toLocaleString()}
-- Unrealized Stock P&L: TZS ${unrealizedPL.toLocaleString()} (${totalReturn}% return)
-- CRDB shares held: ${crdbShares.toLocaleString()}
-- IEACLC-ETF shares held: ${etfShares.toLocaleString()}
-- Total shares held: ${totalShares.toLocaleString()}
-
-## 6-MONTH DSE MARKET DATA
-${summaries.join('\n')}
+## FULL PORTFOLIO DATA
+${context}
 
 ## ANALYSIS REQUESTED
 
 **1. PORTFOLIO HEALTH**
-Assess concentration risk, sector exposure, and overall balance. Be specific to DSE/Tanzania context.
+Assess concentration risk, sector exposure, and overall balance. Use the actual share counts, cost basis, and current values from the data above. Be specific to DSE/Tanzania context.
 
 **2. 5-YEAR PROJECTION**
 Project portfolio value under three scenarios: Conservative (6% CAGR), Moderate (10% CAGR), Optimistic (15% CAGR). Show values in TZS.
 
 **3. TOP BUY OPPORTUNITIES**
-From the 10 tracked stocks, recommend 2-3 to add based on trend, yield, and value. Give specific reasons with TZS figures.
+From the tracked stocks, recommend 2-3 to add based on trend, yield, and value. Give specific reasons with TZS figures.
 
 **4. DIVIDEND INCOME ANALYSIS**
 Calculate estimated annual dividend income from current holdings. Which tracked stocks offer best yield?
@@ -526,12 +511,12 @@ Flag any concerning trends. Note DSE-specific risks (liquidity, sector concentra
 **6. 30-DAY ACTION PLAN**
 Give 3 specific, actionable steps for the next 30 days.
 
-Keep analysis concise, use TZS throughout, tailor all advice to the DSE/Tanzania market context.`;
+Keep analysis concise, use TZS throughout, tailor all advice to the DSE/Tanzania market context. Use the data above — especially the stock holdings, market history, and fundamentals — to inform every section.`;
 
   try {
     const response = UrlFetchApp.fetch(GROQ_URL, {
       method: 'post', contentType: 'application/json',
-      headers: { 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      headers: { 'Authorization': 'Bearer ' + groqKey() },
       payload: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
