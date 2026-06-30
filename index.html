@@ -453,15 +453,17 @@ body.light .hdr{background:rgba(255,255,255,0.95);}
       <div class="ai-hdr" onclick="toggleAI()">
         <div class="ai-hdr-l">
           <div class="ai-hdr-icon">🤖</div>
-          <div><div class="ai-hdr-title">AI Portfolio Advisor</div><div class="ai-hdr-sub">Powered by Gemini · Updated daily</div></div>
+          <div><div class="ai-hdr-title">AI Portfolio Advisor</div><div class="ai-hdr-sub">Powered by Groq · Updated daily</div></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <button class="ai-regen" id="aiRegenBtn" onclick="regenerateAnalysis()" title="Regenerate AI analysis from latest data">↻</button>
           <!-- ↻ Regenerate button (added 2026-07) — sends full context to proxy → runAIAnalysis() → rewrites AI_Insights + AI_Parsed -->
-          <span class="ai-badge">GEMINI</span><span class="ai-chev" id="aiChevron">▾</span>
+          <span class="ai-badge">GROQ</span><span class="ai-chev" id="aiChevron">▾</span>
         </div>
       </div>
       <div class="ai-body" id="aiBody">
+        <div class="ai-gen" id="aiGenerated"><span class="ai-gen-dot"></span> Loading analysis…</div>
+        <hr class="ai-div">
         <div class="ai-3cards">
           <div class="ai-card"><div class="ai-card-icon">💊</div><div class="ai-card-lbl">Portfolio Health</div><div class="ai-card-val" id="aiHealth">—</div><div class="ai-card-sub" id="aiHealthSub"></div></div>
           <div class="ai-card"><div class="ai-card-icon">🎯</div><div class="ai-card-lbl">Top Buy Pick</div><div class="ai-card-val" id="aiBuy">—</div><div class="ai-card-sub" id="aiBuySub"></div></div>
