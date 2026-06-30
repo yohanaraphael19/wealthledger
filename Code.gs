@@ -7,6 +7,7 @@ const DIV_SHEET      = "Dividends_Table";
 const PRICES_SHEET   = "Current_Prices";   // ← new dedicated sheet
 const MY_TICKERS     = ["CRDB", "NMB", "KCB", "NICO", "AFRIPRISE",
                         "DSE", "DCB", "MKCB", "SWIS", "IEACLC-ETF"];
+const REFERER = "https://yohanaraphael19.github.io/wealthledger/"; // for API key referrer restrictions
 
 
 // ── MASTER TRIGGER ────────────────────────────────────────────────────────────
@@ -528,6 +529,7 @@ Keep analysis concise, use TZS throughout, tailor all advice to the DSE/Tanzania
   try {
     const response = UrlFetchApp.fetch(GEMINI_URL, {
       method: 'post', contentType: 'application/json',
+      headers: { 'Referer': REFERER },
       payload: JSON.stringify(payload), muteHttpExceptions: true
     });
 
@@ -641,6 +643,7 @@ Rules:
   try {
     const response = UrlFetchApp.fetch(GEMINI_URL, {
       method: 'post', contentType: 'application/json',
+      headers: { 'Referer': REFERER },
       payload: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 8000 }
@@ -789,6 +792,7 @@ Use null if a value is not found.`;
     try {
       const response = UrlFetchApp.fetch(GEMINI_URL, {
         method: 'post', contentType: 'application/json',
+        headers: { 'Referer': REFERER },
         payload: JSON.stringify({
           contents: [{
             parts: [
@@ -837,8 +841,16 @@ Use null if a value is not found.`;
 function update52WHighLow() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const histSheet = ss.getSheetByName("Historical_Log");
+  if (!histSheet) { console.log("Historical_Log not found"); return; }
+
+  // Auto-create Fundamentals sheet if missing
   let fundSheet = ss.getSheetByName("Fundamentals");
-  if (!histSheet || !fundSheet) { console.log("Historical_Log or Fundamentals sheet not found"); return; }
+  if (!fundSheet) {
+    fundSheet = ss.insertSheet("Fundamentals");
+    fundSheet.getRange("A1:F1").setValues([["Ticker", "EPS (TZS)", "BVPS (TZS)", "ROE (%)", "52W High", "52W Low"]]);
+    fundSheet.getRange("A1:F1").setFontWeight("bold").setBackground("#1A5F5F").setFontColor("#ffffff");
+    console.log("Created Fundamentals sheet");
+  }
 
   const now = new Date();
   const oneYearAgo = new Date(now);

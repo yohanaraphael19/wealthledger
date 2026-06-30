@@ -1,2 +1,5 @@
 # Local exports from Google Sheets — not part of the source repo
 *.csv
+
+# Financial report PDFs — uploaded to Google Drive, not stored in git
+*.pdf
