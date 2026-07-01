@@ -15,9 +15,9 @@
   --s2:       #1C2128;
   --s3:       #21262D;
   --border:   #30363D;
-  --teal:     #14B8A6;
-  --teal-d:   #0D9488;
-  --teal-dim: rgba(20,184,166,0.10);
+  --teal:     #75962E;
+  --teal-d:   #5F7A24;
+  --teal-dim: rgba(117,150,46,0.12);
   --gold:     #F59E0B;
   --gold-dim: rgba(245,158,11,0.10);
   --green:    #22C55E;
@@ -27,7 +27,7 @@
   --muted:    #8B949E;
   --shadow:   0 4px 24px rgba(0,0,0,0.40);
   --shadow-lg:0 8px 48px rgba(0,0,0,0.55);
-  --glow-t:   0 0 24px rgba(20,184,166,0.20);
+  --glow-t:   0 0 24px rgba(117,150,46,0.20);
   --glow-g:   0 0 24px rgba(245,158,11,0.18);
   --radius:   16px;
 }
@@ -38,26 +38,26 @@ body.light{
   --s2:       #DAE0DC;
   --s3:       #CDD4D0;
   --border:   #CDD4D0;
-  --teal:     #75962e;
-  --teal-d:   #2E3820;
-  --teal-dim: rgba(61,74,33,0.08);
+  --teal:     #75962E;
+  --teal-d:   #5F7A24;
+  --teal-dim: rgba(117,150,46,0.08);
   --gold:     #A7D7CF;
   --gold-dim: rgba(167,215,207,0.08);
-  --green:    #75962e;
+  --green:    #22C55E;
   --red:      #DC2626;
   --red-dim:  rgba(220,38,38,0.08);
   --text:     #121A16;
   --muted:    #5A6662;
   --shadow:   0 2px 12px rgba(0,0,0,0.07);
   --shadow-lg:0 8px 32px rgba(0,0,0,0.10);
-  --glow-t:   0 0 16px rgba(61,74,33,0.10);
+  --glow-t:   0 0 16px rgba(117,150,46,0.10);
   --glow-g:   0 0 16px rgba(167,215,207,0.10);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .35s,color .35s;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(20,184,166,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
-body.light::before{background-image:linear-gradient(rgba(199,229,143,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(199,229,143,0.15) 1px,transparent 1px);}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(117,150,46,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(117,150,46,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+body.light::before{background-image:linear-gradient(rgba(117,150,46,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(117,150,46,0.06) 1px,transparent 1px);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:var(--s1);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
@@ -134,7 +134,7 @@ body.light .hdr{background:rgba(230,234,232,0.92);}
 }
 .gauge-card:hover{border-color:var(--teal);box-shadow:var(--glow-t);}
 .gauge-card-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;text-align:center;}
-#sideGauge{height:118px;}
+#sideGauge{height:118px;width:200px;margin:0 auto;}
 .gauge-footer{display:flex;justify-content:space-between;align-items:center;margin-top:2px;}
 .gauge-pct{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;}
 .gauge-label{font-size:9px;color:var(--muted);}
@@ -168,7 +168,7 @@ body.light .hdr{background:rgba(230,234,232,0.92);}
 .rcard-val{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.4px;line-height:1.1;margin-bottom:4px;}
 .rcard-sub{font-size:9px;color:var(--muted);line-height:1.4;}
 .hero{background:var(--s1);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:0;}
-.hero::after{content:'';position:absolute;top:-100px;right:-100px;width:320px;height:320px;background:radial-gradient(circle,rgba(20,184,166,.07) 0%,transparent 65%);pointer-events:none;}
+.hero::after{content:'';position:absolute;top:-100px;right:-100px;width:320px;height:320px;background:radial-gradient(circle,rgba(117,150,46,.07) 0%,transparent 65%);pointer-events:none;}
 .hero::before{content:'';position:absolute;bottom:-80px;left:20%;width:240px;height:240px;background:radial-gradient(circle,rgba(245,158,11,.04) 0%,transparent 65%);pointer-events:none;}
 .hero-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .hero-lbl{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);}
@@ -189,7 +189,7 @@ body.light .hdr{background:rgba(230,234,232,0.92);}
 .badge{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
 .badge.pos{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);}
 .badge.neg{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2);}
-.badge.neu{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(20,184,166,.2);}
+.badge.neu{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(117,150,46,.2);}
 .pos-text{color:var(--green);}
 .neg-text{color:var(--red);}
 .neu-text{color:var(--muted);}
@@ -246,7 +246,7 @@ body.light .hdr{background:rgba(230,234,232,0.92);}
 .ai-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--s1);cursor:pointer;user-select:none;transition:background .2s;}
 .ai-hdr:hover{background:var(--s2);}
 .ai-hdr-l{display:flex;align-items:center;gap:11px;}
-.ai-hdr-icon{width:32px;height:32px;background:var(--teal-dim);border:1px solid rgba(20,184,166,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.ai-hdr-icon{width:32px;height:32px;background:var(--teal-dim);border:1px solid rgba(117,150,46,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
 .ai-hdr-title{font-size:13px;font-weight:700;}
 .ai-hdr-sub{font-size:9px;color:var(--muted);margin-top:1px;}
 .ai-badge{background:var(--teal);color:#000;font-size:8px;font-weight:800;padding:3px 7px;border-radius:20px;letter-spacing:1px;}
@@ -512,12 +512,12 @@ function renderSunburst(data) {
   if (!el) return;
   d3.select(el).selectAll('*').remove();
 
-  const W = 260, H = 260;
+  const W = 270, H = 270;
   const isLight = document.body.classList.contains('light');
   const textColor  = isLight ? '#121A16' : '#F0F6FC';
   const mutedColor = isLight ? '#5A6662' : '#8B949E';
 
-  const stockShades = ['#14B8A6','#0D9488','#0F766E','#115E59','#5EEAD4'];
+  const stockShades = ['#75962E','#6A8829','#5F7A24','#546C1F','#8AB44D'];
   const landShades  = ['#F59E0B','#D97706','#B45309','#92400E','#FBBF24'];
 
   const totalVal = data.stockVal + data.landVal;
@@ -535,7 +535,7 @@ function renderSunburst(data) {
   const hierarchy = {
     name: 'root',
     children: [
-      { name:'Stocks', value:data.stockVal, color:'#14B8A6',
+      { name:'Stocks', value:data.stockVal, color:'#75962E',
         children: data.tickers.map((t,i)=>({ name:t.name, value:t.val, color:stockShades[i%stockShades.length] })) },
       { name:'Land',   value:data.landVal,  color:'#F59E0B',
         children: data.regions.map((r,i)=>({ name:r.name, value:r.val, color:landShades[i%landShades.length] })) }
@@ -693,21 +693,20 @@ function toggleTheme(){
 (function(){
   try{const t=localStorage.getItem('wl_theme');if(t==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='🌙';}}catch(e){}
 })();
-function getDC(){return document.body.classList.contains('light')?['#3D4A21','#A7D7CF','#C7E58F','#8B5CF6','#EF4444','#FBBF24','#F59E0B']:['#14B8A6','#F59E0B','#22C55E','#06B6D4','#8B5CF6','#EF4444','#FBBF24'];}
+function getDC(){return document.body.classList.contains('light')?['#75962E','#A7D7CF','#C7E58F','#8B5CF6','#EF4444','#FBBF24','#F59E0B']:['#75962E','#F59E0B','#22C55E','#8B5CF6','#EF4444','#FBBF24','#A7D7CF'];}
 const DC = getDC();
 
 function renderGauge(pct) {
   if(gaugeInst){gaugeInst.destroy();gaugeInst=null;}
   const val = Math.round(pct*1000)/10;
   const isLight=document.body.classList.contains('light');
-  const gaugeGreen = isLight ? '#3D4A21' : '#14B8A6';
-  const col = val>=0 ? gaugeGreen : '#EF4444';
+  const col = val>=0 ? '#75962E' : '#EF4444';
   // Clamp to 0-500 range for display
   const display = Math.min(Math.max(val, -100), 500);
   const pctFor100 = Math.min(Math.max((display + 100) / 6, 0), 100);
   gaugeInst = new ApexCharts(document.getElementById('sideGauge'), {
     series: [pctFor100],
-    chart: { type:'radialBar', height:110, sparkline:{enabled:true}, background:'transparent' },
+    chart: { type:'radialBar', height:115, sparkline:{enabled:true}, background:'transparent' },
     plotOptions: { radialBar: {
       startAngle: -110, endAngle: 110,
       hollow: { size:'40%' },
@@ -741,7 +740,7 @@ function renderTimeSeries(data) {
     ],
     chart:{ height:260, type:'line', toolbar:{show:false}, background:'transparent', fontFamily:'Outfit', animations:{speed:500} },
     theme:{ mode:isLight?'light':'dark' },
-    colors:['#14B8A6','#F59E0B'],
+    colors:['#75962E','#F59E0B'],
     stroke:{ width:[0,2], curve:'smooth' },
     fill:{ opacity:[0.7,1] },
     plotOptions:{ bar:{ borderRadius:4, columnWidth:'48%' } },
@@ -771,7 +770,7 @@ function renderFundamentals(rows, prices) {
   const body  = document.getElementById('fundBody');
   if (!rows||!rows.length) { panel.style.display='none'; return; }
   const isLight = document.body.classList.contains('light');
-  const highCol = isLight?'#3D4A21':'#14B8A6';
+  const highCol = isLight?'#75962E':'#75962E';
   const lowCol  = isLight?'#DC2626':'#EF4444';
   body.innerHTML = rows.map(r => {
     const tk  = String(r[0]||'').trim().toUpperCase();
@@ -1148,7 +1147,7 @@ function setLR(msg,ok){const el=document.getElementById('logResult');el.textCont
 </script>
 
 <!-- FAB -->
-<button onclick="openLog()" style="position:fixed;bottom:26px;right:26px;z-index:1000;width:50px;height:50px;border-radius:50%;background:var(--teal);color:#000;border:none;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(20,184,166,0.45);display:flex;align-items:center;justify-content:center;transition:all .2s;" onmouseenter="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 28px rgba(20,184,166,0.65)'" onmouseleave="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(20,184,166,0.45)'">＋</button>
+<button onclick="openLog()" style="position:fixed;bottom:26px;right:26px;z-index:1000;width:50px;height:50px;border-radius:50%;background:var(--teal);color:#000;border:none;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(117,150,46,0.45);display:flex;align-items:center;justify-content:center;transition:all .2s;" onmouseenter="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 28px rgba(117,150,46,0.65)'" onmouseleave="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(117,150,46,0.45)'">＋</button>
 
 <!-- LOG MODAL -->
 <style>
@@ -1164,7 +1163,7 @@ function setLR(msg,ok){const el=document.getElementById('logResult');el.textCont
 .lbody{padding:12px 20px 20px;}
 .llbl{font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;display:block;}
 .linp{width:100%;padding:8px 11px;border-radius:8px;border:1px solid var(--border);background:var(--s2);font-size:12px;color:var(--text);box-sizing:border-box;margin-bottom:9px;font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s;}
-.linp:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(20,184,166,.1);}
+.linp:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(117,150,46,.1);}
 .linp option{background:var(--s2);}
 .ldiv{height:1px;background:var(--border);margin:3px 0 10px;}
 .lsave{width:100%;padding:10px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;}
@@ -1175,7 +1174,7 @@ function setLR(msg,ok){const el=document.getElementById('logResult');el.textCont
 <div id="logModal">
   <div class="log-card">
     <div class="lch">
-      <div style="display:flex;align-items:center;gap:9px;"><div style="width:26px;height:26px;background:var(--teal-dim);border:1px solid rgba(20,184,166,.2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;">📝</div><div class="lct">Log Entry</div></div>
+      <div style="display:flex;align-items:center;gap:9px;"><div style="width:26px;height:26px;background:var(--teal-dim);border:1px solid rgba(117,150,46,.2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;">📝</div><div class="lct">Log Entry</div></div>
       <button class="lcx" onclick="closeLog()">✕</button>
     </div>
     <div class="ltabs">
