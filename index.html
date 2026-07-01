@@ -33,31 +33,31 @@
 }
 /* ── LIGHT MODE ── */
 body.light{
-  --bg:       #EDEFF3;
-  --s1:       #F5F6F8;
-  --s2:       #DEE2E8;
-  --s3:       #CCD1D9;
-  --border:   #B0B8C4;
-  --teal:     #4F46E5;
-  --teal-d:   #4338CA;
-  --teal-dim: rgba(79,70,229,0.08);
-  --gold:     #B45309;
-  --gold-dim: rgba(180,83,9,0.08);
-  --green:    #16A34A;
+  --bg:       #F6FAF3;
+  --s1:       #FFFFFF;
+  --s2:       #E6EAE8;
+  --s3:       #DAE0DC;
+  --border:   #E6EAE8;
+  --teal:     #3D4A21;
+  --teal-d:   #2E3820;
+  --teal-dim: rgba(61,74,33,0.08);
+  --gold:     #A7D7CF;
+  --gold-dim: rgba(167,215,207,0.08);
+  --green:    #22C55E;
   --red:      #DC2626;
   --red-dim:  rgba(220,38,38,0.08);
-  --text:     #111827;
-  --muted:    #6B7280;
-  --shadow:   0 2px 12px rgba(0,0,0,0.07);
+  --text:     #121A16;
+  --muted:    #5A6662;
+  --shadow:   0 2px 12px rgba(0,0,0,0.06);
   --shadow-lg:0 8px 32px rgba(0,0,0,0.10);
-  --glow-t:   0 0 16px rgba(79,70,229,0.10);
-  --glow-g:   0 0 16px rgba(180,83,9,0.10);
+  --glow-t:   0 0 16px rgba(61,74,33,0.10);
+  --glow-g:   0 0 16px rgba(167,215,207,0.10);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .35s,color .35s;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(20,184,166,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
-body.light::before{background-image:linear-gradient(rgba(79,70,229,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(79,70,229,0.04) 1px,transparent 1px);}
+body.light::before{background-image:linear-gradient(rgba(199,229,143,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(199,229,143,0.15) 1px,transparent 1px);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:var(--s1);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
@@ -69,7 +69,7 @@ body.light::before{background-image:linear-gradient(rgba(79,70,229,0.04) 1px,tra
 
 /* ── HEADER ─────────────────────────────────────────────── */
 .hdr{background:rgba(22,27,34,0.95);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;backdrop-filter:blur(16px);transition:background .35s;}
-body.light .hdr{background:rgba(245,246,248,0.95);}
+body.light .hdr{background:rgba(255,255,255,0.92);}
 .hdr-brand{display:flex;align-items:center;gap:11px;}
 .hdr-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#000;box-shadow:var(--glow-t);}
 .hdr-title{font-weight:700;font-size:15px;letter-spacing:-0.3px;}
@@ -514,8 +514,8 @@ function renderSunburst(data) {
 
   const W = 260, H = 260;
   const isLight = document.body.classList.contains('light');
-  const textColor  = isLight ? '#111827' : '#F0F6FC';
-  const mutedColor = isLight ? '#6B7280' : '#8B949E';
+  const textColor  = isLight ? '#121A16' : '#F0F6FC';
+  const mutedColor = isLight ? '#5A6662' : '#8B949E';
 
   const stockShades = ['#14B8A6','#0D9488','#0F766E','#115E59','#5EEAD4'];
   const landShades  = ['#F59E0B','#D97706','#B45309','#92400E','#FBBF24'];
@@ -726,8 +726,8 @@ function renderGauge(pct) {
 function renderTimeSeries(data) {
   if(tsChartInst){tsChartInst.destroy();tsChartInst=null;}
   const isLight=document.body.classList.contains('light');
-  const gridCol=isLight?'#B0B8C4':'#30363D';
-  const lblCol =isLight?'#6B7280':'#8B949E';
+  const gridCol=isLight?'#E6EAE8':'#30363D';
+  const lblCol =isLight?'#5A6662':'#8B949E';
   const cats = data.map(d=>{const[y,m]=d.month.split('-');return new Date(+y,+m-1).toLocaleDateString('en-US',{month:'short',year:'2-digit'});});
   tsChartInst = new ApexCharts(document.getElementById('tsChart'), {
     series:[
@@ -766,7 +766,7 @@ function renderFundamentals(rows, prices) {
   const body  = document.getElementById('fundBody');
   if (!rows||!rows.length) { panel.style.display='none'; return; }
   const isLight = document.body.classList.contains('light');
-  const highCol = isLight?'#4F46E5':'#14B8A6';
+  const highCol = isLight?'#3D4A21':'#14B8A6';
   const lowCol  = isLight?'#DC2626':'#EF4444';
   body.innerHTML = rows.map(r => {
     const tk  = String(r[0]||'').trim().toUpperCase();
